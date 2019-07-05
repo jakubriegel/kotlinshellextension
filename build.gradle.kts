@@ -22,7 +22,9 @@ dependencies {
     implementation("io.reactivex.rxjava2:rxkotlin:2.3.0")
 
     testImplementation("junit:junit:4.12")
-    testImplementation("org.mockito:mockito-core:2.28.2")
+//    testImplementation("org.mockito:mockito-core:2.28.2")
+//    testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.1.0")
+    testImplementation("io.mockk:mockk:1.9.3")
 }
 
 tasks.withType<KotlinCompile> {
