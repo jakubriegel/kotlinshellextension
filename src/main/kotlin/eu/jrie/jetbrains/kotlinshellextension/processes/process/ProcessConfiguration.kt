@@ -51,19 +51,19 @@ class OutputConfiguration {
     private set
 
     fun mergeOutTo(destination: ProcessOutputStream) {
-        outputDestination = { redirectOut(destination) }
+        outputDestination = { followMergedOut(destination) }
     }
 
     fun redirectOutTo(stdDestination: ProcessOutputStream, errDestination: ProcessOutputStream) {
-        outputDestination = { redirectOut(stdDestination, errDestination) }
+        outputDestination = { followOut(stdDestination, errDestination) }
     }
 
     fun redirectStdOutTo(destination: ProcessOutputStream) {
-        outputDestination = { redirectStdOut(destination) }
+        outputDestination = { followStdOut(destination) }
     }
 
     fun redirectStdErrTo(destination: ProcessOutputStream) {
-        outputDestination = { redirectStdErr(destination) }
+        outputDestination = { followStdErr(destination) }
     }
 
 }

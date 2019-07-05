@@ -20,22 +20,37 @@ class SystemProcess @TestOnly internal constructor (
     constructor(vPID: Int, command: String, arguments: List<String>)
             : this(vPID, command, arguments, ProcessExecutor())
 
-    val pcb = SystemPCB()
+    override val pcb = SystemPCB()
 
     init {
         executor
             .command(listOf(command).plus(arguments))
             .destroyOnExit()
+            .addListener(SystemProcessListener(this))
     }
 
-    override fun redirectIn(source: ProcessInputStream) = apply {
-        executor.redirectInput(source.tap) }
+    override fun redirectIn(source: ProcessInputStream) = apply { executor.redirectInput(source.tap) }
 
-    override fun redirectOut(destination: ProcessOutputStream) = apply { executor.redirectMergedOut(destination) }
+    override fun followMergedOut() = followMergedOut(ProcessOutputStream())
 
-    override fun redirectStdOut(destination: ProcessOutputStream) = apply { executor.redirectStdOut(destination) }
+    override fun followMergedOut(destination: ProcessOutputStream) = apply {
+        stdout = destination
+        executor.redirectMergedOut(destination)
+    }
 
-    override fun redirectStdErr(destination: ProcessOutputStream) = apply { executor.redirectStdErr(destination) }
+    override fun followStdOut() = followStdOut(ProcessOutputStream())
+
+    override fun followStdOut(destination: ProcessOutputStream) = apply {
+        stdout = destination
+        executor.redirectStdOut(destination)
+    }
+
+    override fun followStdErr() = followStdErr(ProcessOutputStream())
+
+    override fun followStdErr(destination: ProcessOutputStream) = apply {
+        stderr = destination
+        executor.redirectStdErr(destination)
+    }
 
     override fun setEnvironment(env: Map<String, String>) = apply { env.forEach { (e, v) -> setEnvironment(e to v) } }
 

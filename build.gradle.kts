@@ -18,8 +18,7 @@ dependencies {
     implementation( "org.slf4j:slf4j-api:1.7.26")
     implementation( "org.slf4j:slf4j-log4j12:1.7.26")
 
-    implementation("io.reactivex.rxjava2:rxjava:2.2.10")
-    implementation("io.reactivex.rxjava2:rxkotlin:2.3.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-M2")
 
     testImplementation("junit:junit:4.12")
     testImplementation("io.mockk:mockk:1.9.3")

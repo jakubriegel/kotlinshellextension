@@ -18,18 +18,31 @@ class ProcessTest {
 
     @Test
     fun `should redirect outputs to correct destinations`() {
+        // when
+        process.followOut()
+
+        // then
+
+        verify (exactly = 1) { process.followOut() }
+        verify (exactly = 1) { process.followStdOut() }
+        verify (exactly = 1) { process.followStdErr() }
+        confirmVerified(process)
+    }
+
+    @Test
+    fun `should redirect outputs to given destinations`() {
         // given
         val stdout = mockk<ProcessOutputStream>()
         val stderr = mockk<ProcessOutputStream>()
 
         // when
-        process.redirectOut(stdout, stderr)
+        process.followOut(stdout, stderr)
 
         // then
 
-        verify (exactly = 1) { process.redirectOut(stdout, stderr) }
-        verify (exactly = 1) { process.redirectStdOut(stdout) }
-        verify (exactly = 1) { process.redirectStdErr(stderr) }
+        verify (exactly = 1) { process.followOut(stdout, stderr) }
+        verify (exactly = 1) { process.followStdOut(stdout) }
+        verify (exactly = 1) { process.followStdErr(stderr) }
         confirmVerified(process)
     }
 
@@ -64,13 +77,21 @@ class ProcessTest {
     }
 
     private open class SampleProcess : Process(VIRTUAL_PID, COMMAND) {
+        override val pcb: PCB = mockk()
+
         override fun redirectIn(source: ProcessInputStream): Process = mockk()
 
-        override fun redirectOut(destination: ProcessOutputStream): Process = mockk()
+        override fun followMergedOut(): Process = mockk()
 
-        override fun redirectStdOut(destination: ProcessOutputStream): Process = mockk()
+        override fun followMergedOut(destination: ProcessOutputStream): Process = mockk()
 
-        override fun redirectStdErr(destination: ProcessOutputStream): Process = mockk()
+        override fun followStdOut(): Process = mockk()
+
+        override fun followStdOut(destination: ProcessOutputStream): Process = mockk()
+
+        override fun followStdErr(): Process = mockk()
+
+        override fun followStdErr(destination: ProcessOutputStream): Process = mockk()
 
         override fun setEnvironment(env: Map<String, String>): Process = mockk()
 

@@ -7,6 +7,6 @@ class Pipeline (
 ) {
     init {
 //        processes
-//            .forEach { it.redirectOut() }
+//            .forEach { it.followOut() }
     }
 }

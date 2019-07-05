@@ -1,30 +1,33 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
-import io.reactivex.rxkotlin.subscribeBy
-import io.reactivex.subjects.PublishSubject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.runBlocking
 import org.zeroturnaround.exec.stream.LogOutputStream
 
 class ProcessOutputStream : LogOutputStream() {
 
-    private val subject = PublishSubject.create<String>()
-    private val tap = subject.replay().autoConnect()
+    private val channel = Channel<String>()
 
     init {
-        tap.subscribe()
+        println("output init")
     }
 
     override fun processLine(line: String?) {
-        if (line != null) addToSubject(line)
+        if (line != null) addToChannel(line)
     }
 
-    private fun addToSubject(line: String) = subject.onNext("$line\n")
 
-    fun subscribe(onLine: (String) -> Unit) {
-        // TODO: handle errors and end
-        tap.subscribeBy(
-            onNext = onLine,
-            onError = { println("error obs $it") },
-            onComplete = { println("Done!") }
-        )
+    private fun addToChannel(line: String) = runBlocking {
+        channel.send(line)
+    }
+
+    @ExperimentalCoroutinesApi
+    suspend fun subscribe(onLine: (String) -> Unit) = channel.consumeEach { onLine(it) }
+
+    override fun close() {
+        super.close()
+        channel.close()
     }
 }

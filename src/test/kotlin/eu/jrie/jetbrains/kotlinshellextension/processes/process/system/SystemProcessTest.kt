@@ -49,6 +49,7 @@ class SystemProcessTest {
             // custom calls
             executorMock.command(listOf(PROCESS_COMMAND).plus(PROCESS_ARGS))
             executorMock.destroyOnExit()
+            executorMock.addListener(ofType(SystemProcessListener::class))
 
             // default calls
             executorMock.destroyer(ofType(ShutdownHookProcessDestroyer::class))
@@ -79,7 +80,7 @@ class SystemProcessTest {
         val outputMock = mockk<ProcessOutputStream>()
 
         // when
-        process.redirectOut(outputMock)
+        process.followMergedOut(outputMock)
 
         // then
         verify (exactly = 1) { executorMock.redirectOutput(outputMock) }
@@ -92,7 +93,7 @@ class SystemProcessTest {
         val outputMock = mockk<ProcessOutputStream>()
 
         // when
-        process.redirectStdOut(outputMock)
+        process.followStdOut(outputMock)
 
         // then
         verify (exactly = 1) {
@@ -107,7 +108,7 @@ class SystemProcessTest {
         val outputMock = mockk<ProcessOutputStream>()
 
         // when
-        process.redirectStdOut(outputMock)
+        process.followStdOut(outputMock)
 
         // then
         verify (exactly = 0) { executorMock.redirectError(outputMock) }
@@ -121,7 +122,7 @@ class SystemProcessTest {
         val errOutputMock = mockk<ProcessOutputStream>()
 
         // when
-        process.redirectOut(stdOutputMock, errOutputMock)
+        process.followOut(stdOutputMock, errOutputMock)
 
         // then
         verify (exactly = 1) { executorMock.redirectOutput(stdOutputMock) }
