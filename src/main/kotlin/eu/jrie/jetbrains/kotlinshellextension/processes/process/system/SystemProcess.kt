@@ -5,17 +5,21 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessInputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessOutputStream
 import org.apache.commons.io.output.NullOutputStream
+import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-class SystemProcess(
-    virtualPID: Int,
+class SystemProcess @TestOnly internal constructor (
+    vPID: Int,
     command: String,
-    arguments: List<String>
-) : Process(virtualPID, command, arguments) {
+    arguments: List<String>,
+    private val executor: ProcessExecutor
+) : Process(vPID, command, arguments) {
 
-    private val executor = ProcessExecutor()
+    constructor(vPID: Int, command: String, arguments: List<String>)
+            : this(vPID, command, arguments, ProcessExecutor())
+
     val pcb = SystemPCB()
 
     init {
@@ -24,7 +28,8 @@ class SystemProcess(
             .destroyOnExit()
     }
 
-    override fun redirectIn(source: ProcessInputStream) = apply { executor.redirectInput(source.tap) }
+    override fun redirectIn(source: ProcessInputStream) = apply {
+        executor.redirectInput(source.tap) }
 
     override fun redirectOut(destination: ProcessOutputStream) = apply { executor.redirectMergedOut(destination) }
 
