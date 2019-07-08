@@ -50,7 +50,7 @@ abstract class Process protected constructor (
 
     fun followStdErr(destination: ProcessOutputStream) = apply {
         stderr = destination
-        redirectStdOut(stderr)
+        redirectStdErr(stderr)
     }
 
     protected abstract fun redirectStdErr(destination: ProcessOutputStream)
