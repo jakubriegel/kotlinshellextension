@@ -6,12 +6,14 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.annotations.TestOnly
 
-open class ProcessOutputStream (
-    private val scope: CoroutineScope
+open class ProcessOutputStream @TestOnly internal constructor(
+    private val scope: CoroutineScope,
+    private val channel: Channel<Byte>
 ) {
 
-    private val channel = Channel<Byte>(CHANNEL_BUFFER)
+    constructor(scope: CoroutineScope) : this(scope, Channel<Byte>(CHANNEL_BUFFER))
 
     fun send(line: String) = runBlocking (scope.coroutineContext) {
         line.plus(LINE_END)
@@ -19,13 +21,13 @@ open class ProcessOutputStream (
             .forEach { send(it) }
     }
 
-    private suspend fun send(b: Byte) {
+    suspend fun send(b: Byte) {
         channel.send(b)
     }
 
     @ExperimentalCoroutinesApi
-    suspend fun subscribe(onLine: (Byte) -> Unit) = scope.launch {
-        channel.consumeEach { onLine(it) }
+    suspend fun subscribe(onNext: (Byte) -> Unit) = scope.launch {
+        channel.consumeEach { onNext(it) }
     }
 
     fun close() {
