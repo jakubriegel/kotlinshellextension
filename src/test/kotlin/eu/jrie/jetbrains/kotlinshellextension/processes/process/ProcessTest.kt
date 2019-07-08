@@ -1,11 +1,15 @@
-package eu.jrie.jetbrains.kotlinshellextension.processes.process;
+package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import org.junit.Test
-import org.mockito.Mockito.*
 
 class ProcessTest {
 
-    private val process = spy(SampleProcess())
+    private val process = spyk<SampleProcess>()
 
     private companion object {
         const val COMMAND = "cmd"
@@ -15,17 +19,18 @@ class ProcessTest {
     @Test
     fun `should redirect outputs to correct destinations`() {
         // given
-        val stdout = mock(ProcessOutputStream::class.java)
-        val stderr = mock(ProcessOutputStream::class.java)
+        val stdout = mockk<ProcessOutputStream>()
+        val stderr = mockk<ProcessOutputStream>()
 
         // when
         process.redirectOut(stdout, stderr)
 
         // then
-        verify(process, times(1)).redirectOut(stdout, stderr)
-        verify(process, times(1)).redirectStdOut(stdout)
-        verify(process, times(1)).redirectStdErr(stderr)
-        verifyNoMoreInteractions(process)
+
+        verify (exactly = 1) { process.redirectOut(stdout, stderr) }
+        verify (exactly = 1) { process.redirectStdOut(stdout) }
+        verify (exactly = 1) { process.redirectStdErr(stderr) }
+        confirmVerified(process)
     }
 
     @Test
@@ -33,13 +38,13 @@ class ProcessTest {
         // given
         val action = { process.kill() }
 
-        `when`(process.isAlive()).thenReturn(true)
+        every { process.isAlive() } returns true
 
         // when
         process.ifAlive(action)
 
         // then
-        verify(process, times(1)).kill()
+        verify (exactly = 1) { process.kill() }
 
     }
 
@@ -48,39 +53,30 @@ class ProcessTest {
         // given
         val action = { process.kill() }
 
-        `when`(process.isAlive()).thenReturn(false)
+        every { process.isAlive() } returns false
 
         // when
         process.ifAlive(action)
 
         // then
-        verify(process, never()).kill()
+        verify (exactly = 0) { process.kill() }
 
     }
 
-    private open class SampleProcess : Process(
-        VIRTUAL_PID,
-        COMMAND
-    ) {
-        override fun redirectIn(source: ProcessInputStream): Process = mock(
-            Process::class.java)
+    private open class SampleProcess : Process(VIRTUAL_PID, COMMAND) {
+        override fun redirectIn(source: ProcessInputStream): Process = mockk()
 
-        override fun redirectOut(destination: ProcessOutputStream): Process = mock(
-            Process::class.java)
+        override fun redirectOut(destination: ProcessOutputStream): Process = mockk()
 
-        override fun redirectStdOut(destination: ProcessOutputStream): Process = mock(
-            Process::class.java)
+        override fun redirectStdOut(destination: ProcessOutputStream): Process = mockk()
 
-        override fun redirectStdErr(destination: ProcessOutputStream): Process = mock(
-            Process::class.java)
+        override fun redirectStdErr(destination: ProcessOutputStream): Process = mockk()
 
-        override fun setEnvironment(env: Map<String, String>): Process = mock(
-            Process::class.java)
+        override fun setEnvironment(env: Map<String, String>): Process = mockk()
 
-        override fun setEnvironment(env: Pair<String, String>): Process = mock(
-            Process::class.java)
+        override fun setEnvironment(env: Pair<String, String>): Process = mockk()
 
-        override fun start(): PCB = mock(PCB::class.java)
+        override fun start(): PCB = mockk()
 
         override fun isAlive(): Boolean = false
 
