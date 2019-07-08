@@ -15,17 +15,23 @@ class ProcessOutputStream (
     private val channel = Channel<Byte>(CHANNEL_BUFFER)
 
     override fun processLine(line: String?) {
-        if (line != null) addToChannel(line)
+        if (line != null) send(line)
     }
 
-    private fun addToChannel(line: String) = runBlocking {
+    private fun send(line: String) = runBlocking (scope.coroutineContext) {
         line.plus(LINE_END)
             .map { it.toByte() }
-            .forEach { channel.send(it) }
+            .forEach { send(it) }
+    }
+
+    private suspend fun send(b: Byte) {
+        channel.send(b)
     }
 
     @ExperimentalCoroutinesApi
-    suspend fun subscribe(onLine: (Byte) -> Unit) = scope.launch { channel.consumeEach { onLine(it) } }
+    suspend fun subscribe(onLine: (Byte) -> Unit) = scope.launch {
+        channel.consumeEach { onLine(it) }
+    }
 
     override fun close() {
         super.close()
