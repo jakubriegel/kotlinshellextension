@@ -4,6 +4,10 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.PCB
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessInputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessOutputStream
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import org.apache.commons.io.output.NullOutputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
@@ -14,11 +18,12 @@ class SystemProcess @TestOnly internal constructor (
     vPID: Int,
     command: String,
     arguments: List<String>,
+    scope: CoroutineScope,
     private val executor: ProcessExecutor
-) : Process(vPID, command, arguments) {
+) : Process(vPID, command, arguments, scope) {
 
-    constructor(vPID: Int, command: String, arguments: List<String>)
-            : this(vPID, command, arguments, ProcessExecutor())
+    constructor(vPID: Int, command: String, arguments: List<String>, scope: CoroutineScope)
+            : this(vPID, command, arguments, scope, ProcessExecutor())
 
     override val pcb = SystemPCB()
 
@@ -59,10 +64,13 @@ class SystemProcess @TestOnly internal constructor (
 
     override fun isAlive() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
 
-    override fun await(timeout: Long) = ifAlive {
-        with(pcb.startedProcess!!) {
-            if (timeout.compareTo(0) == 0) future.get()
-            else future.get(timeout , TimeUnit.MILLISECONDS)
+    @ObsoleteCoroutinesApi // TODO: implement process management in nonblocking way
+    override fun await(timeout: Long) = scope.launch (newSingleThreadContext("$virtualPID $command join thread")) {
+        ifAlive {
+            with(pcb.startedProcess!!) {
+                if (timeout.compareTo(0) == 0) future.get()
+                else future.get(timeout, TimeUnit.MILLISECONDS)
+            }
         }
     }
 

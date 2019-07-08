@@ -8,7 +8,6 @@ class SystemProcessListener (
     override fun afterStop(process: Process?) = finalizeProcess()
 
     private fun finalizeProcess() {
-        systemProcess.stdout.close()
-        systemProcess.stderr.close()
+        systemProcess.closeOut()
     }
 }

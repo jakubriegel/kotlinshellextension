@@ -1,9 +1,13 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+
 abstract class Process protected constructor (
     val virtualPID: Int,
     val command: String,
-    val arguments: List<String> = emptyList()
+    val arguments: List<String> = emptyList(),
+    val scope: CoroutineScope
 ) {
 
     abstract val pcb: PCB
@@ -59,7 +63,12 @@ abstract class Process protected constructor (
 
     abstract fun isAlive(): Boolean
 
-    abstract fun await(timeout: Long = 0)
+    abstract fun await(timeout: Long = 0): Job
+
+    internal fun closeOut() {
+        if (::stdout.isInitialized) stdout.close()
+        if (::stderr.isInitialized) stderr.close()
+    }
 
     abstract fun kill()
 
