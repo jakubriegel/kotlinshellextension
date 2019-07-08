@@ -25,7 +25,7 @@ abstract class Process protected constructor (
         redirectMergedOut(stdout)
     }
 
-    abstract fun redirectMergedOut(destination: ProcessOutputStream)
+    protected abstract fun redirectMergedOut(destination: ProcessOutputStream)
 
     fun followOut() = apply {
         followStdOut()
@@ -44,7 +44,7 @@ abstract class Process protected constructor (
         redirectStdOut(stdout)
     }
 
-    abstract fun redirectStdOut(destination: ProcessOutputStream)
+    protected abstract fun redirectStdOut(destination: ProcessOutputStream)
 
     fun followStdErr() = followStdErr(ProcessOutputStream(scope))
 
@@ -53,7 +53,7 @@ abstract class Process protected constructor (
         redirectStdOut(stderr)
     }
 
-    abstract fun redirectStdErr(destination: ProcessOutputStream)
+    protected abstract fun redirectStdErr(destination: ProcessOutputStream)
 
     abstract fun setEnvironment(env: Map<String, String>): Process
 
