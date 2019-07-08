@@ -12,6 +12,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.output.NullOutputStream
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -30,7 +32,7 @@ import java.util.concurrent.TimeUnit
 
 class SystemProcessTest {
     private val executorMock = spyk<ProcessExecutor>()
-    private val process = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, executorMock)
+    private val process = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, mockk(), executorMock)
 
     @Before
     fun before() {
@@ -212,66 +214,70 @@ class SystemProcessTest {
     }
 
     @Test
-    fun `should blocking await process`() {
+    @ObsoleteCoroutinesApi
+    fun `should blocking await process`() = runBlocking {
         // given
+        val p = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, this, spyk())
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk()
         }
 
-        process.pcb.startedProcess = mockk {
+        p.pcb.startedProcess = mockk {
             every { process.isAlive } returns true
             every { future } returns futureMock
         }
 
         // when
-        process.await()
+        p.await().join()
 
         // then
         verify (exactly = 1) { futureMock.get() }
-        confirmVerified(futureMock)
     }
 
     @Test
-    fun `should await process with given timeout`() {
+    @ObsoleteCoroutinesApi
+    fun `should await process with given timeout`() = runBlocking {
         // given
+        val p = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, this, spyk())
         val timeout: Long = 500
 
         val futureMock = mockk<Future<ProcessResult>> {
             every { get(timeout, TimeUnit.MILLISECONDS) } returns mockk()
         }
 
-        process.pcb.startedProcess = mockk {
+        p.pcb.startedProcess = mockk {
             every { process.isAlive } returns true
             every { future } returns futureMock
         }
 
         // when
-        process.await(timeout)
+        p.await(timeout).join()
 
         // then
         verify (exactly = 1) { futureMock.get(timeout, TimeUnit.MILLISECONDS) }
-        confirmVerified(futureMock)
     }
 
+
     @Test
-    fun `should not await not alive process`() {
+    @ObsoleteCoroutinesApi
+    fun `should not await not alive process`() = runBlocking {
         // given
+        val p = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, this, spyk())
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk()
         }
 
-        process.pcb.startedProcess = mockk {
+        p.pcb.startedProcess = mockk {
             every { process.isAlive } returns false
             every { future } returns futureMock
         }
 
         // when
-        process.await()
+        p.await().join()
 
         // then
         verify (exactly = 0) { futureMock.get() }
         verify (exactly = 0) { futureMock.get(ofType(Long::class), ofType(TimeUnit::class)) }
-        confirmVerified(futureMock)
     }
 
     @Test
