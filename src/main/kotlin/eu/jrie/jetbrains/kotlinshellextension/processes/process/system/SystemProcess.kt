@@ -11,6 +11,7 @@ import kotlinx.coroutines.newSingleThreadContext
 import org.apache.commons.io.output.NullOutputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
+import org.zeroturnaround.exec.stream.LogOutputStream
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
@@ -37,15 +38,17 @@ class SystemProcess @TestOnly internal constructor (
     override fun redirectIn(source: ProcessInputStream) = apply { executor.redirectInput(source.tap) }
 
     override fun redirectMergedOut(destination: ProcessOutputStream) {
-        executor.redirectMergedOut(destination)
+        executor.redirectOutput(ProcessLogOutputStream(destination))
     }
 
     override fun redirectStdOut(destination: ProcessOutputStream) {
-        executor.redirectStdOut(destination)
+        executor
+            .redirectOutput(ProcessLogOutputStream(destination))
+            .redirectError(NullOutputStream())
     }
 
     override fun redirectStdErr(destination: ProcessOutputStream)  {
-        executor.redirectStdErr(destination)
+        executor.redirectError(ProcessLogOutputStream(destination))
     }
 
     override fun setEnvironment(env: Map<String, String>) = apply { env.forEach { (e, v) -> setEnvironment(e to v) } }
@@ -81,10 +84,11 @@ class SystemProcess @TestOnly internal constructor (
         }
     }
 
-    private fun ProcessExecutor.redirectMergedOut(destination: ProcessOutputStream) = redirectOutput(destination)
-
-    private fun ProcessExecutor.redirectStdOut(destination: ProcessOutputStream) =
-        redirectOutput(destination).redirectError(NullOutputStream())
-
-    private fun ProcessExecutor.redirectStdErr(destination: ProcessOutputStream) = redirectError(destination)
+    internal class ProcessLogOutputStream (
+        private val processOutputStream: ProcessOutputStream
+    ) : LogOutputStream() {
+        override fun processLine(line: String?) {
+            if (line != null) processOutputStream.send(line)
+        }
+    }
 }

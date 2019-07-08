@@ -85,7 +85,7 @@ class SystemProcessTest {
         process.followMergedOut(outputMock)
 
         // then
-        verify (exactly = 1) { executorMock.redirectOutput(outputMock) }
+        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.ProcessLogOutputStream::class)) }
         verify (exactly = 0) { executorMock.redirectError(any()) }
     }
 
@@ -99,7 +99,7 @@ class SystemProcessTest {
 
         // then
         verify (exactly = 1) {
-            executorMock.redirectOutput(outputMock)
+            executorMock.redirectOutput(ofType(SystemProcess.ProcessLogOutputStream::class))
             executorMock.redirectError(ofType(NullOutputStream::class))
         }
     }
@@ -113,7 +113,7 @@ class SystemProcessTest {
         process.followStdOut(outputMock)
 
         // then
-        verify (exactly = 0) { executorMock.redirectError(outputMock) }
+        verify (exactly = 0) { executorMock.redirectError(ofType(SystemProcess.ProcessLogOutputStream::class)) }
         verify (exactly = 1) { executorMock.redirectOutput(any()) }
     }
 
@@ -127,8 +127,8 @@ class SystemProcessTest {
         process.followOut(stdOutputMock, errOutputMock)
 
         // then
-        verify (exactly = 1) { executorMock.redirectOutput(stdOutputMock) }
-        verify (exactly = 1) { executorMock.redirectError(errOutputMock) }
+        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.ProcessLogOutputStream::class)) }
+        verify (exactly = 1) { executorMock.redirectError(ofType(SystemProcess.ProcessLogOutputStream::class)) }
     }
 
     @Test
