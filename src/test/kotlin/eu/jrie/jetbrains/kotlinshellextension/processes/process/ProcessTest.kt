@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.Job
 import org.junit.Test
 
 class ProcessTest {
@@ -76,22 +77,16 @@ class ProcessTest {
 
     }
 
-    private open class SampleProcess : Process(VIRTUAL_PID, COMMAND) {
+    private open class SampleProcess : Process(VIRTUAL_PID, COMMAND, scope = mockk()) {
         override val pcb: PCB = mockk()
 
         override fun redirectIn(source: ProcessInputStream): Process = mockk()
 
-        override fun followMergedOut(): Process = mockk()
+        override fun redirectMergedOut(destination: ProcessOutputStream) {}
 
-        override fun followMergedOut(destination: ProcessOutputStream): Process = mockk()
+        override fun redirectStdOut(destination: ProcessOutputStream) {}
 
-        override fun followStdOut(): Process = mockk()
-
-        override fun followStdOut(destination: ProcessOutputStream): Process = mockk()
-
-        override fun followStdErr(): Process = mockk()
-
-        override fun followStdErr(destination: ProcessOutputStream): Process = mockk()
+        override fun redirectStdErr(destination: ProcessOutputStream) {}
 
         override fun setEnvironment(env: Map<String, String>): Process = mockk()
 
@@ -101,7 +96,7 @@ class ProcessTest {
 
         override fun isAlive(): Boolean = false
 
-        override fun await(timeout: Long) {}
+        override fun await(timeout: Long): Job = mockk()
 
         override fun kill() {}
     }

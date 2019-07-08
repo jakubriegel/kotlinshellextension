@@ -31,24 +31,15 @@ class SystemProcess @TestOnly internal constructor (
 
     override fun redirectIn(source: ProcessInputStream) = apply { executor.redirectInput(source.tap) }
 
-    override fun followMergedOut() = followMergedOut(ProcessOutputStream())
-
-    override fun followMergedOut(destination: ProcessOutputStream) = apply {
-        stdout = destination
+    override fun redirectMergedOut(destination: ProcessOutputStream) {
         executor.redirectMergedOut(destination)
     }
 
-    override fun followStdOut() = followStdOut(ProcessOutputStream())
-
-    override fun followStdOut(destination: ProcessOutputStream) = apply {
-        stdout = destination
+    override fun redirectStdOut(destination: ProcessOutputStream) {
         executor.redirectStdOut(destination)
     }
 
-    override fun followStdErr() = followStdErr(ProcessOutputStream())
-
-    override fun followStdErr(destination: ProcessOutputStream) = apply {
-        stderr = destination
+    override fun redirectStdErr(destination: ProcessOutputStream)  {
         executor.redirectStdErr(destination)
     }
 

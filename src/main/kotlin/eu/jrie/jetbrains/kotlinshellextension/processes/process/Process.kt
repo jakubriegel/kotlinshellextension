@@ -8,15 +8,20 @@ abstract class Process protected constructor (
 
     abstract val pcb: PCB
 
-    lateinit var input: ProcessInputStream protected set
-    lateinit var stdout: ProcessOutputStream protected set
-    lateinit var stderr: ProcessOutputStream protected set
+    lateinit var input: ProcessInputStream private set
+    lateinit var stdout: ProcessOutputStream private set
+    lateinit var stderr: ProcessOutputStream private set
 
     abstract fun redirectIn(source: ProcessInputStream): Process
 
-    abstract fun followMergedOut(): Process
+    fun followMergedOut() = followMergedOut(ProcessOutputStream(scope))
 
-    abstract fun followMergedOut(destination: ProcessOutputStream): Process
+    fun followMergedOut(destination: ProcessOutputStream) = apply {
+        stdout = destination
+        redirectMergedOut(stdout)
+    }
+
+    abstract fun redirectMergedOut(destination: ProcessOutputStream)
 
     fun followOut() = apply {
         followStdOut()
@@ -28,13 +33,23 @@ abstract class Process protected constructor (
         followStdErr(errDestination)
     }
 
-    abstract fun followStdOut(): Process
+    fun followStdOut() = followStdOut(ProcessOutputStream(scope))
 
-    abstract fun followStdOut(destination: ProcessOutputStream): Process
+    fun followStdOut(destination: ProcessOutputStream) = apply {
+        stdout = destination
+        redirectStdOut(stdout)
+    }
 
-    abstract fun followStdErr(): Process
+    abstract fun redirectStdOut(destination: ProcessOutputStream)
 
-    abstract fun followStdErr(destination: ProcessOutputStream): Process
+    fun followStdErr() = followStdErr(ProcessOutputStream(scope))
+
+    fun followStdErr(destination: ProcessOutputStream) = apply {
+        stderr = destination
+        redirectStdOut(stderr)
+    }
+
+    abstract fun redirectStdErr(destination: ProcessOutputStream)
 
     abstract fun setEnvironment(env: Map<String, String>): Process
 
