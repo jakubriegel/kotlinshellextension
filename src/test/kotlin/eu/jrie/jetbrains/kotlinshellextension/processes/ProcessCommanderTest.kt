@@ -1,21 +1,21 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessConfiguration
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcess
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
-import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProcessCommanderTest {
-    private val commander = ProcessCommander()
+    private val commander = ProcessCommander(mockk())
 
     private val config = TestDataFactory.processConfigFunction()
 
@@ -28,7 +28,9 @@ class ProcessCommanderTest {
         val vPID = commander.systemProcess(config)
 
         // then
-        verify (exactly = 1) { ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), vPID) }
+        verify (exactly = 1) {
+            ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), vPID, ofType(CoroutineScope::class))
+        }
         assertTrue(vPID > 0)
 
     }
@@ -43,8 +45,10 @@ class ProcessCommanderTest {
         val vPID2 = commander.systemProcess(config)
 
         // then
-        verify (exactly = 1) { ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), vPID1) }
-        verify (exactly = 1) { ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), vPID2) }
+        verify (exactly = 1) {
+            ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), vPID1, ofType(CoroutineScope::class))
+            ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), vPID2, ofType(CoroutineScope::class))
+        }
         assertTrue(vPID1 > 0)
         assertTrue(vPID2 > 0)
         assertTrue(vPID1 != vPID2)
@@ -55,12 +59,16 @@ class ProcessCommanderTest {
     fun `should start process`() {
         // given
         val vPID = 1
-        val processMock = spyk(SystemProcess(vPID, TestDataFactory.PROCESS_COMMAND, TestDataFactory.PROCESS_ARGS))
-        every { processMock.start() } returns mockk()
+        val processMock = mockk<Process> {
+            every { start() } returns mockk()
+            every { virtualPID } returns vPID
+        }
 
         mockkObject(ProcessBuilder)
         every {
-            ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), ofType(Int::class))
+            ProcessBuilder.createSystemProcess(
+                ofType(ProcessConfiguration::class), ofType(Int::class), ofType(CoroutineScope::class)
+            )
         } returns processMock
 
         commander.systemProcess(config)
@@ -78,12 +86,15 @@ class ProcessCommanderTest {
         // given
         val vPID = 1
         val timeout: Long = 500
-        val processMock = spyk(SystemProcess(vPID, TestDataFactory.PROCESS_COMMAND, TestDataFactory.PROCESS_ARGS))
-        every { processMock.await(timeout) } just Runs
-
+        val processMock = mockk<Process> {
+            every { await(timeout) } returns mockk()
+            every { virtualPID } returns vPID
+        }
         mockkObject(ProcessBuilder)
         every {
-            ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), ofType(Int::class))
+            ProcessBuilder.createSystemProcess(
+                ofType(ProcessConfiguration::class), ofType(Int::class), ofType(CoroutineScope::class)
+            )
         } returns processMock
 
         commander.systemProcess(config)
@@ -100,12 +111,16 @@ class ProcessCommanderTest {
     fun `should kill process`() {
         // given
         val vPID = 1
-        val processMock = spyk(SystemProcess(vPID, TestDataFactory.PROCESS_COMMAND, TestDataFactory.PROCESS_ARGS))
-        every { processMock.kill() } just Runs
+        val processMock = mockk<Process> {
+            every { kill() } just Runs
+            every { virtualPID } returns vPID
+        }
 
         mockkObject(ProcessBuilder)
         every {
-            ProcessBuilder.createSystemProcess(ofType(ProcessConfiguration::class), ofType(Int::class))
+            ProcessBuilder.createSystemProcess(
+                ofType(ProcessConfiguration::class), ofType(Int::class), ofType(CoroutineScope::class)
+            )
         } returns processMock
 
         commander.systemProcess(config)
