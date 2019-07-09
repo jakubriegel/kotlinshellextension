@@ -83,11 +83,32 @@ abstract class Process protected constructor (
 
     abstract fun setEnvironment(env: Pair<String, String>): Process
 
-    abstract fun start(): PCB
+    fun start(): PCB {
+        return if (pcb.state != ProcessState.READY) {
+            throw Exception("only READY process can be started")
+        }
+        else {
+            execute()
+            pcb.state = ProcessState.RUNNING
+            logger.debug("started $name")
+            pcb
+        }
+    }
+
+    protected abstract fun execute(): PCB
 
     abstract fun isAlive(): Boolean
 
-    abstract fun await(timeout: Long = 0): Job
+    fun await(timeout: Long = 0): Job {
+        val awaitJob = expect(timeout)
+        awaitJob.invokeOnCompletion {
+            pcb.state = ProcessState.TERMINATED
+            logger.debug("awaited process $name")
+        }
+        return awaitJob
+    }
+
+    abstract fun expect(timeout: Long): Job
 
     internal fun closeOut() {
         if (::stdout.isInitialized) stdout.close()
@@ -95,7 +116,13 @@ abstract class Process protected constructor (
         logger.debug("closed out of $name")
     }
 
-    abstract fun kill()
+    fun kill() {
+        destroy()
+        pcb.state = ProcessState.TERMINATED
+        logger.debug("killed process $name")
+    }
+
+    abstract fun destroy()
 
     fun ifAlive(action: () -> Unit) {
         if (isAlive()) action()

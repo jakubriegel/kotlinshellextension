@@ -62,36 +62,33 @@ class SystemProcess @TestOnly internal constructor (
 
     override fun setEnvironment(env: Pair<String, String>) = apply { executor.environment(env.first, env.second) }
 
-    override fun start(): PCB {
+    override fun execute(): PCB {
         val started = executor.start()!!
 
         pcb.startTime = started.process.info().startInstant().orElse(Instant.MIN)
         pcb.systemPID = started.process.pid()
         pcb.startedProcess = started
 
-        logger.debug("started SystemProcess $name with PID=${pcb.systemPID}")
         return pcb
     }
 
     override fun isAlive() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
 
     @ObsoleteCoroutinesApi // TODO: implement process management in nonblocking way
-    override fun await(timeout: Long) = scope.launch (newSingleThreadContext("$vPID $command join")) {
+    override fun expect(timeout: Long) = scope.launch (newSingleThreadContext("$vPID $command join")) {
         ifAlive {
             with(pcb.startedProcess!!) {
                 if (timeout.compareTo(0) == 0) future.get()
                 else future.get(timeout, TimeUnit.MILLISECONDS)
             }
         }
-        logger.debug("awaited SystemProcess $name")
     }
 
-    override fun kill() = ifAlive {
+    override fun destroy() = ifAlive {
         with(pcb.startedProcess!!) {
-            process.destroy()
-            ifAlive { process.destroyForcibly() }
+            val result = future.cancel(true)
+            if (!result) throw Exception("cannot kill process $name")
         }
-        logger.debug("killed SystemProcess $name")
     }
 
     internal class SystemProcessLogOutputStream (
