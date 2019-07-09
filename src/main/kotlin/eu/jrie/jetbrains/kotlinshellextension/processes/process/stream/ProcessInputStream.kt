@@ -2,6 +2,7 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process.stream
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.TestOnly
 
@@ -22,12 +23,15 @@ class ProcessInputStream @TestOnly internal constructor(
         channel.send(b)
     }
 
+    fun writeBlocking(b: Byte) {
+        channel.sendBlocking(b)
+    }
+
     fun writeNewLine() = writeAsLine(ByteArray(0))
 
     fun writeAsLine(data: String) = writeAsLine(data.toByteArray())
 
     fun writeAsLine(data: ByteArray) = write(data.plus(LINE_END.toByte()))
-
 
     fun read() = runBlocking (scope.coroutineContext) {
         channel.receive()
