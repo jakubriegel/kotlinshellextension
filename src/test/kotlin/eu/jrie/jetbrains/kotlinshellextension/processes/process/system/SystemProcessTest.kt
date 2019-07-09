@@ -1,7 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessInputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessOutputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
@@ -16,6 +16,7 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.output.NullOutputStream
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -25,7 +26,6 @@ import org.zeroturnaround.exec.ProcessResult
 import org.zeroturnaround.exec.StartedProcess
 import org.zeroturnaround.exec.listener.DestroyerListenerAdapter
 import org.zeroturnaround.exec.listener.ShutdownHookProcessDestroyer
-import java.io.PipedInputStream
 import java.util.*
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -33,16 +33,6 @@ import java.util.concurrent.TimeUnit
 class SystemProcessTest {
     private val executorMock = spyk<ProcessExecutor>()
     private val process = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, mockk(), executorMock)
-
-    @Before
-    fun before() {
-
-    }
-
-    @After
-    fun after() {
-
-    }
 
     @Test
     fun `should initialize the executor`() {
@@ -64,71 +54,83 @@ class SystemProcessTest {
     @Test
     fun `should redirect input`() {
         // given
-        val tapMock = mockk<PipedInputStream>()
-        val inputMock = mockk<ProcessInputStream> {
-            every { tap } returns tapMock
-        }
+        val inputSpy = spyk(ProcessInputStream(mockk()))
 
         // when
-        process.redirectIn(inputMock)
+        process.followIn(inputSpy)
 
         // then
-        verify (exactly = 1) { executorMock.redirectInput(any()) }
+        verify (exactly = 1) { executorMock.redirectInput(ofType(SystemProcess.SystemProcessInputStream::class)) }
+
+        assertEquals(inputSpy.vPID, VIRTUAL_PID)
     }
 
     @Test
     fun `should redirect merged output`() {
         // given
-        val outputMock = mockk<ProcessOutputStream>()
+        val outputSpy = spyk(ProcessOutputStream(mockk()))
 
         // when
-        process.followMergedOut(outputMock)
+        process.followMergedOut(outputSpy)
 
         // then
-        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.ProcessLogOutputStream::class)) }
+        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
         verify (exactly = 0) { executorMock.redirectError(any()) }
+
+        assertEquals(outputSpy.vPID, VIRTUAL_PID)
     }
 
     @Test
     fun `should redirect only stdout`() {
         // given
-        val outputMock = mockk<ProcessOutputStream>()
+        val outputSpy = spyk(ProcessOutputStream(mockk()))
 
         // when
-        process.followStdOut(outputMock)
+        process.followStdOut(outputSpy)
 
         // then
+        verify (exactly = 0) { executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
         verify (exactly = 1) {
-            executorMock.redirectOutput(ofType(SystemProcess.ProcessLogOutputStream::class))
+            executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class))
             executorMock.redirectError(ofType(NullOutputStream::class))
         }
+
+        assertEquals(outputSpy.vPID, VIRTUAL_PID)
     }
 
     @Test
     fun `should redirect only stderr`() {
         // given
-        val outputMock = mockk<ProcessOutputStream>()
+        val outputSpy = spyk(ProcessOutputStream(mockk()))
 
         // when
-        process.followStdOut(outputMock)
+        process.followStdErr(outputSpy)
 
         // then
-        verify (exactly = 0) { executorMock.redirectError(ofType(SystemProcess.ProcessLogOutputStream::class)) }
-        verify (exactly = 1) { executorMock.redirectOutput(any()) }
+        verify (exactly = 1) { executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
+        verify (exactly = 0) { executorMock.redirectError(ofType(NullOutputStream::class)) }
+        verify (exactly = 0) { executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
+
+        assertEquals(outputSpy.vPID, VIRTUAL_PID)
     }
 
     @Test
-    fun `should redirect stdout adn stderr to separated streams`() {
+    fun `should redirect stdout and stderr to separated streams`() {
         // given
-        val stdOutputMock = mockk<ProcessOutputStream>()
-        val errOutputMock = mockk<ProcessOutputStream>()
+        val stdOutputSpy = spyk(ProcessOutputStream(mockk()))
+        val errOutputSpy = spyk(ProcessOutputStream(mockk()))
 
         // when
-        process.followOut(stdOutputMock, errOutputMock)
+        process.followOut(stdOutputSpy, errOutputSpy)
 
         // then
-        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.ProcessLogOutputStream::class)) }
-        verify (exactly = 1) { executorMock.redirectError(ofType(SystemProcess.ProcessLogOutputStream::class)) }
+        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
+        verify (exactly = 1) { executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
+
+        assertEquals(stdOutputSpy.vPID, VIRTUAL_PID)
+        assertEquals(errOutputSpy.vPID, VIRTUAL_PID)
+        assertEquals(process.stdout, stdOutputSpy)
+        assertEquals(process.stderr, errOutputSpy)
     }
 
     @Test

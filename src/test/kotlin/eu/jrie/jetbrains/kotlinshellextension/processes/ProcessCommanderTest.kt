@@ -61,7 +61,7 @@ class ProcessCommanderTest {
         val vPID = 1
         val processMock = mockk<Process> {
             every { start() } returns mockk()
-            every { virtualPID } returns vPID
+            every { this@mockk.vPID } returns vPID
         }
 
         mockkObject(ProcessBuilder)
@@ -88,7 +88,7 @@ class ProcessCommanderTest {
         val timeout: Long = 500
         val processMock = mockk<Process> {
             every { await(timeout) } returns mockk()
-            every { virtualPID } returns vPID
+            every { this@mockk.vPID } returns vPID
         }
         mockkObject(ProcessBuilder)
         every {
@@ -113,7 +113,7 @@ class ProcessCommanderTest {
         val vPID = 1
         val processMock = mockk<Process> {
             every { kill() } just Runs
-            every { virtualPID } returns vPID
+            every { this@mockk.vPID } returns vPID
         }
 
         mockkObject(ProcessBuilder)

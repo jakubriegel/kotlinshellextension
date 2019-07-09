@@ -1,5 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import io.mockk.Runs
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -8,6 +10,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Job
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,20 +33,18 @@ class ProcessTest {
             process.followMergedOut()
             process.followMergedOut(ofType(ProcessOutputStream::class))
         }
-        confirmVerified(process)
     }
 
     @Test
     fun `should redirect merged output to given stdout`() {
         // given
-        val outMock = mockk<ProcessOutputStream>()
+        val outMock = spyk(ProcessOutputStream(mockk()))
 
         // when
         process.followMergedOut(outMock)
 
         // then
         verify (exactly = 1) { process.followMergedOut(outMock) }
-        confirmVerified(process)
         assertTrue(process.stdout == outMock)
     }
 
@@ -58,14 +59,13 @@ class ProcessTest {
         verify (exactly = 1) { process.followStdErr() }
         verify (exactly = 1) { process.followStdOut(ofType(ProcessOutputStream::class)) }
         verify (exactly = 1) { process.followStdErr(ofType(ProcessOutputStream::class)) }
-        confirmVerified(process)
     }
 
     @Test
     fun `should redirect outputs to given destinations`() {
         // given
-        val stdMock = mockk<ProcessOutputStream>()
-        val errMock = mockk<ProcessOutputStream>()
+        val stdMock = spyk(ProcessOutputStream(mockk()))
+        val errMock = spyk(ProcessOutputStream(mockk()))
 
         // when
         process.followOut(stdMock, errMock)
@@ -74,7 +74,6 @@ class ProcessTest {
         verify (exactly = 1) { process.followOut(stdMock, errMock) }
         verify (exactly = 1) { process.followStdOut(stdMock) }
         verify (exactly = 1) { process.followStdErr(errMock) }
-        confirmVerified(process)
         assertTrue(process.stdout == stdMock)
         assertTrue(process.stderr == errMock)
     }
@@ -82,10 +81,10 @@ class ProcessTest {
     @Test
     fun `should close stdout and stderr`() {
         // given
-        val stdMock = mockk<ProcessOutputStream> {
+        val stdMock = spyk(ProcessOutputStream(mockk())) {
             every { close() } just Runs
         }
-        val errMock = mockk<ProcessOutputStream> {
+        val errMock = spyk(ProcessOutputStream(mockk())) {
             every { close() } just Runs
         }
 
@@ -97,7 +96,6 @@ class ProcessTest {
         // then
         verify (exactly = 1) { stdMock.close() }
         verify (exactly = 1) { errMock.close() }
-        confirmVerified(stdMock, errMock)
     }
 
     @Test
@@ -111,6 +109,10 @@ class ProcessTest {
         process.ifAlive(action)
 
         // then
+        verify (exactly = 1) {
+            process.ifAlive(any())
+            process.isAlive()
+        }
         verify (exactly = 1) { process.kill() }
 
     }
@@ -126,6 +128,10 @@ class ProcessTest {
         process.ifAlive(action)
 
         // then
+        verify (exactly = 1) {
+            process.ifAlive(any())
+            process.isAlive()
+        }
         verify (exactly = 0) { process.kill() }
 
     }
@@ -134,7 +140,7 @@ class ProcessTest {
 
         override val pcb: PCB = mockk()
 
-        override fun redirectIn(source: ProcessInputStream): Process = mockk()
+        override fun redirectIn(source: ProcessInputStream) {}
 
         override fun redirectMergedOut(destination: ProcessOutputStream) {}
 

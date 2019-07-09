@@ -8,7 +8,7 @@ object ProcessBuilder {
         val process = SystemProcess(virtualPID, config.command, config.arguments, scope)
         process.setEnvironment(config.environment)
         if (config.inputSource != null)
-            process.redirectIn(config.inputSource!!)
+            process.followIn(config.inputSource!!)
         if (config.redirectOutput != {}) process.apply { config.redirectOutput.invoke(this) }
         return process
     }

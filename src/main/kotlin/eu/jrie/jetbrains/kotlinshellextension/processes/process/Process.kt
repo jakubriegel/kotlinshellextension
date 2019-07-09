@@ -1,10 +1,14 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 abstract class Process protected constructor (
-    val virtualPID: Int,
+    val vPID: Int,
     val command: String,
     val arguments: List<String> = emptyList(),
     val scope: CoroutineScope
@@ -12,17 +16,33 @@ abstract class Process protected constructor (
 
     abstract val pcb: PCB
 
+    open val name: String
+        get() = "[$vPID $command]"
+
     lateinit var input: ProcessInputStream private set
     lateinit var stdout: ProcessOutputStream private set
     lateinit var stderr: ProcessOutputStream private set
 
-    abstract fun redirectIn(source: ProcessInputStream): Process
+    fun followIn() = followIn(ProcessInputStream(scope))
 
-    fun followMergedOut() = followMergedOut(ProcessOutputStream(scope))
+    fun followIn(source: ProcessInputStream) = apply {
+        input = source
+        input.vPID = vPID
+        redirectIn(source)
+        logger.trace("followed in of $name")
+    }
+
+    protected abstract fun redirectIn(source: ProcessInputStream)
+
+    fun followMergedOut() = followMergedOut(
+        ProcessOutputStream(scope)
+    )
 
     fun followMergedOut(destination: ProcessOutputStream) = apply {
         stdout = destination
+        stdout.vPID = vPID
         redirectMergedOut(stdout)
+        logger.trace("followed merged out of $name")
     }
 
     protected abstract fun redirectMergedOut(destination: ProcessOutputStream)
@@ -41,7 +61,9 @@ abstract class Process protected constructor (
 
     fun followStdOut(destination: ProcessOutputStream) = apply {
         stdout = destination
+        stdout.vPID = vPID
         redirectStdOut(stdout)
+        logger.trace("followed stdout of $name")
     }
 
     protected abstract fun redirectStdOut(destination: ProcessOutputStream)
@@ -50,7 +72,9 @@ abstract class Process protected constructor (
 
     fun followStdErr(destination: ProcessOutputStream) = apply {
         stderr = destination
+        stderr.vPID = vPID
         redirectStdErr(stderr)
+        logger.trace("followed stderr of $name")
     }
 
     protected abstract fun redirectStdErr(destination: ProcessOutputStream)
@@ -68,6 +92,7 @@ abstract class Process protected constructor (
     internal fun closeOut() {
         if (::stdout.isInitialized) stdout.close()
         if (::stderr.isInitialized) stderr.close()
+        logger.debug("closed out of $name")
     }
 
     abstract fun kill()
@@ -76,4 +101,8 @@ abstract class Process protected constructor (
         if (isAlive()) action()
     }
 
+    companion object {
+        @JvmStatic
+        protected val logger: Logger = LoggerFactory.getLogger(Process::class.java)
+    }
 }

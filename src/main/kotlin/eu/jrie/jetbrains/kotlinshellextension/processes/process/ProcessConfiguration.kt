@@ -1,5 +1,8 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
+
 class ProcessConfiguration {
 
     var command: String = ""

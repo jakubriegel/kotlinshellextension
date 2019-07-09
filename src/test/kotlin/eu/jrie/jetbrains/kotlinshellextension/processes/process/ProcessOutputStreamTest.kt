@@ -1,5 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +16,7 @@ import org.junit.Test
 
 class ProcessOutputStreamTest {
 
-    private val channelSpy = spyk(Channel<Byte>(ProcessOutputStream.CHANNEL_BUFFER))
+    private val channelSpy = spyk(Channel<Byte>(ProcessStream.CHANNEL_BUFFER_SIZE))
 
     private lateinit var stream: ProcessOutputStream
 
@@ -79,7 +81,8 @@ class ProcessOutputStreamTest {
     @ExperimentalCoroutinesApi
     fun `should close channel`() {
         // given
-        stream = ProcessOutputStream(mockk(), channelSpy)
+        stream =
+            ProcessOutputStream(mockk(), channelSpy)
 
         // when
         stream.close()

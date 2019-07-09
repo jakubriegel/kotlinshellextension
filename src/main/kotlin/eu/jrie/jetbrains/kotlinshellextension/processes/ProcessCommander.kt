@@ -4,7 +4,6 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessConfiguration
 import kotlinx.coroutines.CoroutineScope
-import org.apache.log4j.BasicConfigurator
 
 class ProcessCommander (
     val scope: CoroutineScope
@@ -15,7 +14,7 @@ class ProcessCommander (
     fun systemProcess(config: ProcessConfiguration.() -> Unit) =
         createSystemProcess(config).let {
             processes.add(it)
-            it.virtualPID
+            it.vPID
         }
 
     private fun createSystemProcess(config: ProcessConfiguration.() -> Unit) =
@@ -30,14 +29,9 @@ class ProcessCommander (
     fun killProcess(vPID: Int) = getProcessByVirtualPID(vPID).kill()
 
     private fun getProcessByVirtualPID(vPID: Int) =
-        processes.find { it.virtualPID == vPID } ?: throw Exception("no processes with given virtual PID: $vPID")
+        processes.find { it.vPID == vPID } ?: throw Exception("no processes with given virtual PID: $vPID")
 
     companion object {
-        init {
-            // TODO: move to better place and implement logger
-            BasicConfigurator.configure()
-        }
-
         private var nextVirtualPID = 1
         private fun virtualPID() = nextVirtualPID++
 
