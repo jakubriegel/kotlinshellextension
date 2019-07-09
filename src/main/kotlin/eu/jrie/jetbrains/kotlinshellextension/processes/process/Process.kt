@@ -103,6 +103,6 @@ abstract class Process protected constructor (
 
     companion object {
         @JvmStatic
-        protected val logger: Logger = LoggerFactory.getLogger(Process::class.java)
+        internal val logger: Logger = LoggerFactory.getLogger(Process::class.java)
     }
 }
