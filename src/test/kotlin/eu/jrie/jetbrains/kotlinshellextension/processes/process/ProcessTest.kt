@@ -3,14 +3,12 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import io.mockk.Runs
-import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Job
-import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
