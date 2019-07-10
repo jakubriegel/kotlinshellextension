@@ -142,6 +142,60 @@ class DSLIntegrationTest : BaseIntegrationTest() {
         assertEquals(process.stdout, outputStream.value)
     }
 
+    @Test
+    fun `should create system process with output redirected to given streams`() {
+        // given
+        val stdStream = lazy { commander.processOutputStream() }
+        val errStream = lazy { commander.processOutputStream() }
+
+        // when
+        val process = systemProcess {
+            output {
+                redirectOutTo(stdStream.value, errStream.value)
+            }
+        }
+
+        // then
+        assertEquals(process.vPID, stdStream.value.vPID)
+        assertEquals(process.vPID, errStream.value.vPID)
+        assertEquals(process.stdout, stdStream.value)
+        assertEquals(process.stderr, errStream.value)
+    }
+
+    @Test
+    fun `should create system process with std output redirected to given stream`() {
+        // given
+        val stdStream = lazy { commander.processOutputStream() }
+
+        // when
+        val process = systemProcess {
+            output {
+                redirectStdOutTo(stdStream.value)
+            }
+        }
+
+        // then
+        assertEquals(process.vPID, stdStream.value.vPID)
+        assertEquals(process.stdout, stdStream.value)
+    }
+
+    @Test
+    fun `should create system process with err output redirected to given stream`() {
+        // given
+        val errStream = lazy { commander.processOutputStream() }
+
+        // when
+        val process = systemProcess {
+            output {
+                redirectStdErrTo(errStream.value)
+            }
+        }
+
+        // then
+        assertEquals(process.vPID, errStream.value.vPID)
+        assertEquals(process.stderr, errStream.value)
+    }
+
     private fun systemProcess(config: ProcessConfiguration.() -> Unit) = runTest {
         val vPID = commander.systemProcess(config)
         commander.getProcessByVirtualPID(vPID)
