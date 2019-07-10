@@ -105,32 +105,17 @@ class ProcessCommander (
 
     @ExperimentalCoroutinesApi
     fun pipe(vararg processes: Process, tap: (Byte) -> Unit) = runBlocking(scope.coroutineContext) {
-        // TODO choose implementation
-//        pipeIt(*processes) { tap(it) }
-        pipeRec(*processes) { tap(it) }
+        pipe(0, 1, tap, processes)
     }
 
     @ExperimentalCoroutinesApi
-    private suspend fun pipeIt(vararg processes: Process, tap: (Byte) -> Unit) {
-        for (i in processes.indices.drop(1).dropLast(1)) {
-            pipe(processes[i-1], processes[i])
-        }
-        pipe(processes[processes.size-2], processes[processes.size-1], tap)
-    }
-
-    @ExperimentalCoroutinesApi
-    private suspend fun pipeRec(vararg processes: Process, tap: (Byte) -> Unit) {
-        pipeRec(0, 1, tap, processes)
-    }
-
-    @ExperimentalCoroutinesApi
-    private tailrec suspend fun pipeRec(p1: Int, p2: Int, tap: (Byte) -> Unit, processes: Array<out Process>) {
+    private tailrec suspend fun pipe(p1: Int, p2: Int, tap: (Byte) -> Unit, processes: Array<out Process>) {
         if (p2 == processes.lastIndex) {
             pipe(processes[p1], processes[p2], tap)
         }
         else {
             pipe(processes[p1], processes[p2])
-            pipeRec(p2, p2+1, tap, processes)
+            pipe(p2, p2+1, tap, processes)
         }
     }
 
