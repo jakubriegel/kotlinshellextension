@@ -1,11 +1,14 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
+
 class ProcessConfiguration {
 
     var command: String = ""
-    private set
+        private set
     var arguments: List<String> = emptyList()
-    private set
+        private set
     fun cmd(cmd: String) { command = cmd }
     fun cmd(config: ProcessConfiguration.() -> Unit) = config()
     infix fun String.withArgs(args: List<String>) {
@@ -18,6 +21,12 @@ class ProcessConfiguration {
     }
 
     val environment = mutableMapOf<String, String>()
+    fun env(env: Pair<String, String>) {
+        environment[env.first] = env.second
+    }
+    fun env(env: Map<String, String>) {
+        environment.putAll(env)
+    }
     fun env(config: EnvironmentConfiguration.() -> Unit) {
         environment.putAll(
             EnvironmentConfiguration().apply { config() }
@@ -26,17 +35,16 @@ class ProcessConfiguration {
     }
 
     var inputSource: ProcessInputStream? = null
-    private set
+        private set
     fun input(source: ProcessInputStream) { inputSource = source }
 
     var redirectOutput: Process.() -> Unit = {}
-    private set
+        private set
     fun output(config: OutputConfiguration.() -> Unit) {
         redirectOutput = OutputConfiguration()
             .apply { config() }
             .outputDestination
     }
-
 
 }
 
@@ -51,19 +59,19 @@ class OutputConfiguration {
     private set
 
     fun mergeOutTo(destination: ProcessOutputStream) {
-        outputDestination = { redirectOut(destination) }
+        outputDestination = { followMergedOut(destination) }
     }
 
     fun redirectOutTo(stdDestination: ProcessOutputStream, errDestination: ProcessOutputStream) {
-        outputDestination = { redirectOut(stdDestination, errDestination) }
+        outputDestination = { followOut(stdDestination, errDestination) }
     }
 
     fun redirectStdOutTo(destination: ProcessOutputStream) {
-        outputDestination = { redirectStdOut(destination) }
+        outputDestination = { followStdOut(destination) }
     }
 
     fun redirectStdErrTo(destination: ProcessOutputStream) {
-        outputDestination = { redirectStdErr(destination) }
+        outputDestination = { followStdErr(destination) }
     }
 
 }
