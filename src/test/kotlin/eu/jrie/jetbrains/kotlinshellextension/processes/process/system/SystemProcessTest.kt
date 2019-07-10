@@ -15,10 +15,11 @@ import io.mockk.verify
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.output.NullOutputStream
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.ProcessResult
 import org.zeroturnaround.exec.StartedProcess
@@ -286,21 +287,77 @@ class SystemProcessTest {
         // given
         val processMock = mockk<java.lang.Process> {
             every { isAlive } returns true
-            every { destroy() } returns mockk()
-            every { destroyForcibly() } returns mockk()
+        }
+        val futureMock = mockk<Future<ProcessResult>> {
+            every { cancel(true) } returns true
         }
 
-        val startedProcessMock = spyk(StartedProcess(processMock, mockk()))
+        val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
         process.pcb.startedProcess = startedProcessMock
 
         // when
-        process.kill()
+        process.destroy()
 
         // then
         verify { processMock.isAlive }
-        verify (exactly = 1) { processMock.destroy() }
-        verify (atMost = 1) { processMock.destroyForcibly() }
-        confirmVerified(processMock)
+        verify (exactly = 1) { futureMock.cancel(true) }
+        verify (exactly = 0 ){
+            processMock.destroy()
+            processMock.destroyForcibly()
+        }
+        confirmVerified(futureMock)
+    }
+
+    @Test
+    @Suppress("RemoveRedundantQualifierName")
+    fun `should throw exception when cannot kill process`() {
+        // given
+        val processMock = mockk<java.lang.Process> {
+            every { isAlive } returns true
+        }
+        val futureMock = mockk<Future<ProcessResult>> {
+            every { cancel(true) } returns false
+        }
+
+        val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
+        process.pcb.startedProcess = startedProcessMock
+
+        // when
+        assertThrows<Exception> { process.destroy() }
+
+        // then
+        verify { processMock.isAlive }
+        verify (exactly = 1) { futureMock.cancel(true) }
+        verify (exactly = 0 ){
+            processMock.destroy()
+            processMock.destroyForcibly()
+        }
+        confirmVerified(futureMock)
+    }
+
+    @Test
+    @Suppress("RemoveRedundantQualifierName")
+    fun `should not kill not alive process`() {
+        // given
+        val processMock = mockk<java.lang.Process> {
+            every { isAlive } returns false
+        }
+        val futureMock = mockk<Future<ProcessResult>>()
+
+        val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
+        process.pcb.startedProcess = startedProcessMock
+
+        // when
+        process.destroy()
+
+        // then
+        verify { processMock.isAlive }
+        verify (exactly = 0) { futureMock.cancel(true) }
+        verify (exactly = 0 ){
+            processMock.destroy()
+            processMock.destroyForcibly()
+        }
+        confirmVerified(futureMock)
     }
 
 }

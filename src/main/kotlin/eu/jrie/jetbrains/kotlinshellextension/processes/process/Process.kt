@@ -99,6 +99,10 @@ abstract class Process protected constructor (
 
     abstract fun isAlive(): Boolean
 
+    fun ifAlive(action: () -> Unit) {
+        if (isAlive()) action()
+    }
+
     fun await(timeout: Long = 0): Job {
         val awaitJob = expect(timeout)
         awaitJob.invokeOnCompletion {
@@ -123,10 +127,6 @@ abstract class Process protected constructor (
     }
 
     abstract fun destroy()
-
-    fun ifAlive(action: () -> Unit) {
-        if (isAlive()) action()
-    }
 
     companion object {
         @JvmStatic
