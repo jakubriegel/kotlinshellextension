@@ -2,6 +2,10 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENV_VAR_1
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENV_VAR_2
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENV_VAR_3
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.processInputStreamSpy
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.processOutputStreamSpy
 import io.mockk.Runs
@@ -108,6 +112,54 @@ class ProcessTest {
     }
 
     @Test
+    fun  `should add new variable to the environment`() {
+        // when
+        process.addEnv(ENV_VAR_1)
+
+        // then
+        assertEquals(process.environment().size, 1)
+        assertEquals(process.environment()[ENV_VAR_1.first], ENV_VAR_1.second)
+    }
+
+    @Test
+    fun  `should add new variables to the environment`() {
+        // when
+        process.addEnv(ENVIRONMENT)
+
+        // then
+        assertEquals(process.environment().size, 3)
+        assertEquals(process.environment()[ENV_VAR_1.first], ENV_VAR_1.second)
+        assertEquals(process.environment()[ENV_VAR_2.first], ENV_VAR_2.second)
+        assertEquals(process.environment()[ENV_VAR_3.first], ENV_VAR_3.second)
+    }
+
+    @Test
+    fun  `should replace the environment with given variable`() {
+        // when
+        process.addEnv(ENV_VAR_1)
+        process.addEnv(ENV_VAR_2)
+        process.setEnv(ENV_VAR_3)
+
+        // then
+        assertEquals(process.environment().size, 1)
+        assertEquals(process.environment()[ENV_VAR_3.first], ENV_VAR_3.second)
+    }
+
+    @Test
+    fun  `should replace the environment with given variables`() {
+        // when
+        process.addEnv("var1" to "val2")
+        process.addEnv("var2" to "val2")
+        process.setEnv(ENVIRONMENT)
+
+        // then
+        assertEquals(process.environment().size, 3)
+        assertEquals(process.environment()[ENV_VAR_1.first], ENV_VAR_1.second)
+        assertEquals(process.environment()[ENV_VAR_2.first], ENV_VAR_2.second)
+        assertEquals(process.environment()[ENV_VAR_3.first], ENV_VAR_3.second)
+    }
+
+    @Test
     fun `should start process`() {
         // when
         process.start()
@@ -210,10 +262,6 @@ class ProcessTest {
         override fun redirectStdOut(destination: ProcessOutputStream) {}
 
         override fun redirectStdErr(destination: ProcessOutputStream) {}
-
-        override fun setEnvironment(env: Map<String, String>): Process = mockk()
-
-        override fun setEnvironment(env: Pair<String, String>): Process = mockk()
 
         override fun execute(): PCB = mockk()
 

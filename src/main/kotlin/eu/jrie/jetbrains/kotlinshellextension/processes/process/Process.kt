@@ -23,6 +23,9 @@ abstract class Process protected constructor (
     lateinit var stdout: ProcessOutputStream private set
     lateinit var stderr: ProcessOutputStream private set
 
+    private val environment = mutableMapOf<String, String>()
+    fun environment() = environment.toMap()
+
     fun followIn() = followIn(ProcessInputStream(scope))
 
     fun followIn(source: ProcessInputStream) = apply {
@@ -79,9 +82,33 @@ abstract class Process protected constructor (
 
     protected abstract fun redirectStdErr(destination: ProcessOutputStream)
 
-    abstract fun setEnvironment(env: Map<String, String>): Process
+    /**
+     * Adds new variable to the environment
+     *
+     * @return `null` or the previous associated with the key
+     */
+    fun addEnv(env: Pair<String, String>) = environment.put(env.first, env.second)
 
-    abstract fun setEnvironment(env: Pair<String, String>): Process
+    /**
+     * Adds all given variables to the environment
+     */
+    fun addEnv(env: Map<String, String>) = environment.putAll(env)
+
+    /**
+     * Replaces current environment with given variable
+     */
+    fun setEnv(env: Pair<String, String>) {
+        environment.clear()
+        addEnv(env)
+    }
+
+    /**
+     * Replaces current environment with given variables
+     */
+    fun setEnv(env: Map<String, String>) {
+        environment.clear()
+        addEnv(env)
+    }
 
     fun start(): PCB {
         return if (pcb.state != ProcessState.READY) {

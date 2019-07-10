@@ -3,6 +3,8 @@ package eu.jrie.jetbrains.kotlinshellextension.processes
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessConfiguration
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -20,6 +22,10 @@ class ProcessCommander (
             processes.add(it)
             it.vPID
         }
+
+    fun processInputStream() = ProcessInputStream(scope)
+
+    fun processOutputStream() = ProcessOutputStream(scope)
 
     private fun createSystemProcess(config: ProcessConfiguration.() -> Unit) =
         with(ProcessConfiguration().apply(config)) {
@@ -128,7 +134,7 @@ class ProcessCommander (
         }
     }
 
-    private fun getProcessByVirtualPID(vPID: Int) =
+    fun getProcessByVirtualPID(vPID: Int) =
         processes.find { it.vPID == vPID } ?: throw Exception("no processes with given virtual PID: $vPID")
 
     companion object {

@@ -2,7 +2,6 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
-import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.SYSTEM_PID
@@ -12,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.io.output.NullOutputStream
@@ -133,30 +133,6 @@ class SystemProcessTest {
     }
 
     @Test
-    fun `should set environment variables`() {
-        // given
-        val env = TestDataFactory.ENVIRONMENT
-
-        // when
-        process.setEnvironment(env)
-
-        // then
-        env.forEach { (k, v) -> verify (exactly = 1) { executorMock.environment(k, v) } }
-    }
-
-    @Test
-    fun `should set single environment variable`() {
-        // given
-        val env = TestDataFactory.ENV_VAR_1
-
-        // when
-        process.setEnvironment(env)
-
-        // then
-        verify (exactly = 1) { executorMock.environment(env.first, env.second) }
-    }
-
-    @Test
     fun `should start process`() {
         // given
         val startedProcessMock = mockk<StartedProcess> {
@@ -171,7 +147,10 @@ class SystemProcessTest {
         process.start()
 
         // then
-        verify (exactly = 1) { executorMock.start() }
+        verifyOrder {
+            executorMock.environment(process.environment())
+            executorMock.start()
+        }
     }
 
     @Test

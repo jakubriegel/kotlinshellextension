@@ -58,12 +58,10 @@ class SystemProcess @TestOnly internal constructor (
         executor.redirectError(SystemProcessLogOutputStream(destination))
     }
 
-    override fun setEnvironment(env: Map<String, String>) = apply { env.forEach { (e, v) -> setEnvironment(e to v) } }
-
-    override fun setEnvironment(env: Pair<String, String>) = apply { executor.environment(env.first, env.second) }
-
     override fun execute(): PCB {
-        val started = executor.start()!!
+        val started = executor
+            .environment(environment())
+            .start()!!
 
         pcb.startTime = started.process.info().startInstant().orElse(Instant.MIN)
         pcb.systemPID = started.process.pid()
