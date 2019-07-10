@@ -1,39 +1,18 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.stream
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.sendBlocking
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.annotations.TestOnly
+interface ProcessInputStream {
 
-class ProcessInputStream @TestOnly internal constructor(
-    scope: CoroutineScope,
-    channel: Channel<Byte>
-) : ProcessStream(scope, channel) {
+    fun write(line: String)
 
-    constructor(scope: CoroutineScope) : this(scope, Channel<Byte>(CHANNEL_BUFFER_SIZE))
+    fun write(line: ByteArray)
 
-    fun write(line: String) = write(line.toByteArray())
+    suspend fun write(b: Byte)
 
-    fun write(line: ByteArray) = runBlocking (scope.coroutineContext) {
-        line.forEach { write(it) }
-    }
+    fun writeBlocking(b: Byte)
 
-    suspend fun write(b: Byte) {
-        channel.send(b)
-    }
+    fun writeNewLine()
 
-    fun writeBlocking(b: Byte) {
-        channel.sendBlocking(b)
-    }
+    fun writeAsLine(data: String)
 
-    fun writeNewLine() = writeAsLine(ByteArray(0))
-
-    fun writeAsLine(data: String) = writeAsLine(data.toByteArray())
-
-    fun writeAsLine(data: ByteArray) = write(data.plus(LINE_END.toByte()))
-
-    fun read() = runBlocking (scope.coroutineContext) {
-        channel.receive()
-    }
+    fun writeAsLine(data: ByteArray)
 }
