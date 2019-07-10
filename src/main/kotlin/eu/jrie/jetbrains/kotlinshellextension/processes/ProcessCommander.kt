@@ -55,46 +55,76 @@ class ProcessCommander (
     }
 
     @ExperimentalCoroutinesApi
-    fun pipe(vPID1: Int, vPID2: Int) = scope.launch {
-        val p1 = getProcessByVirtualPID(vPID1)
-        val p2 = getProcessByVirtualPID(vPID2)
-
-        if (!p1.isAlive()) startProcess(p1)
-        p1.stdout.subscribe(
-            { p2.input.writeBlocking(it) },
-            { p2.input.close() }
+    fun pipe(vPID1: Int, vPID2: Int) = scope.launch{
+        pipe(
+            getProcessByVirtualPID(vPID1),
+            getProcessByVirtualPID(vPID2)
         )
-
-        if (!p2.isAlive()) startProcess(p2)
     }
 
     @ExperimentalCoroutinesApi
-    fun pipe(vPID1: Int, vPID2: Int, tap: (Byte) -> Unit) = scope.launch {
-        pipe(vPID1, vPID2)
-        getProcessByVirtualPID(vPID2).stdout.subscribe(tap)
+    fun pipe(vPID1: Int, vPID2: Int, tap: (Byte) -> Unit) = scope.launch{
+        pipe(
+            getProcessByVirtualPID(vPID1),
+            getProcessByVirtualPID(vPID2),
+            tap
+        )
+    }
+
+    @ExperimentalCoroutinesApi
+    suspend fun pipe(first: Process, second: Process, tap: (Byte) -> Unit) {
+        pipe(first, second)
+        second.stdout.subscribe(tap)
+    }
+
+    @ExperimentalCoroutinesApi
+    suspend fun pipe(first: Process, second: Process) {
+        if (!first.isAlive()) startProcess(first)
+        first.stdout.subscribe(
+            { second.input.writeBlocking(it) },
+            { second.input.close() }
+        )
+
+        if (!second.isAlive()) startProcess(second)
     }
 
     @ExperimentalCoroutinesApi
     fun pipe(vararg vPIDs: Int, tap: (Byte) -> Unit) = runBlocking(scope.coroutineContext) {
-        for (i in vPIDs.indices.drop(1).dropLast(1)) {
-            pipe(vPIDs[i-1], vPIDs[i]).join()
+        val processes = vPIDs
+            .map { getProcessByVirtualPID(it) }
+            .toTypedArray()
+
+        pipe(*processes) { tap(it) }
+    }
+
+    @ExperimentalCoroutinesApi
+    fun pipe(vararg processes: Process, tap: (Byte) -> Unit) = runBlocking(scope.coroutineContext) {
+        // TODO choose implementation
+//        pipeIt(*processes) { tap(it) }
+        pipeRec(*processes) { tap(it) }
+    }
+
+    @ExperimentalCoroutinesApi
+    private suspend fun pipeIt(vararg processes: Process, tap: (Byte) -> Unit) {
+        for (i in processes.indices.drop(1).dropLast(1)) {
+            pipe(processes[i-1], processes[i])
         }
-        pipe(vPIDs[vPIDs.size-2], vPIDs[vPIDs.size-1], tap).join()
+        pipe(processes[processes.size-2], processes[processes.size-1], tap)
     }
 
     @ExperimentalCoroutinesApi
-    fun pipeRec(vararg vPIDs: Int, tap: (Byte) -> Unit) = runBlocking(scope.coroutineContext) {
-        pipe(0, 1, tap, vPIDs)
+    private suspend fun pipeRec(vararg processes: Process, tap: (Byte) -> Unit) {
+        pipeRec(0, 1, tap, processes)
     }
 
     @ExperimentalCoroutinesApi
-    private tailrec suspend fun pipe(p1: Int, p2: Int, tap: (Byte) -> Unit, vPIDs: IntArray) {
-        if (p2 == vPIDs.lastIndex) {
-            pipe(vPIDs[p1], vPIDs[p2], tap).join()
+    private tailrec suspend fun pipeRec(p1: Int, p2: Int, tap: (Byte) -> Unit, processes: Array<out Process>) {
+        if (p2 == processes.lastIndex) {
+            pipe(processes[p1], processes[p2], tap)
         }
         else {
-            pipe(vPIDs[p1], vPIDs[p2]).join()
-            pipe(p2, p2+1, tap, vPIDs)
+            pipe(processes[p1], processes[p2])
+            pipeRec(p2, p2+1, tap, processes)
         }
     }
 
