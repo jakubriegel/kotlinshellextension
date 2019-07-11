@@ -2,6 +2,7 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.VIRTUAL_PID
 import io.mockk.every
 import io.mockk.just
 import io.mockk.runs
@@ -22,9 +23,6 @@ class ProcessTest {
     private val process = spyk<SampleProcess>()
 
     companion object {
-        const val COMMAND = "cmd"
-        const val VIRTUAL_PID = 1
-
         val stdMock = spyk<ProcessStream> {
             every { close() } just runs
         }
