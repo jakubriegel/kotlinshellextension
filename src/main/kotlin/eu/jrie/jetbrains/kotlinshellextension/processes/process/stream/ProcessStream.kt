@@ -12,7 +12,7 @@ import org.jetbrains.annotations.TestOnly
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class ProcessStream @TestOnly internal constructor(
+open class ProcessStream @TestOnly internal constructor(
 //    protected val scope: CoroutineScope
     private val channel: Channel<Byte>
 ) : ProcessInputStream, ProcessOutputStream{
@@ -21,14 +21,14 @@ class ProcessStream @TestOnly internal constructor(
 
     private lateinit var scope: CoroutineScope
 
-    var vPID = -1
-        internal set
+    private val vPIDs = mutableListOf<Int>()
 
     val name: String
-        get() = "${this::class.simpleName}_$vPID"
+        get() = "[${this::class.simpleName} ${vPIDs.joinToString()}]"
 
-    fun initialize(scope: CoroutineScope) {
-        this.scope = scope
+    fun initialize(vPID: Int, scope: CoroutineScope) {
+        vPIDs.add(vPID)
+        if (!this::scope.isInitialized) this.scope = scope
     }
 
     fun close() {

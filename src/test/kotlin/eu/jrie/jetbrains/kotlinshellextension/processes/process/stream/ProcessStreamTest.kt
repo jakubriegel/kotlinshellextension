@@ -1,6 +1,6 @@
-package eu.jrie.jetbrains.kotlinshellextension.processes.process
+package eu.jrie.jetbrains.kotlinshellextension.processes.process.stream
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.VIRTUAL_PID
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -22,7 +22,6 @@ class ProcessStreamTest {
 
     private val stream = ProcessStream(channelSpy)
 
-
     @Test
     fun `should initialize the stream`() = runBlocking {
         // given
@@ -33,11 +32,13 @@ class ProcessStreamTest {
         coEvery { channelSpy.receive() } returns 1
 
         // when
-        stream.initialize(scopeMock)
+        stream.initialize(VIRTUAL_PID, scopeMock)
         stream.read()
 
         // then
         verify (exactly = 1) { scopeMock.coroutineContext }
+
+        assertEquals("[ProcessStream $VIRTUAL_PID]", stream.name)
     }
 
     @Test
@@ -204,7 +205,7 @@ class ProcessStreamTest {
     }
 
     private fun <T> runTest(test: suspend () -> T) = runBlocking {
-        stream.initialize(this)
+        stream.initialize(VIRTUAL_PID, this)
         val result = test()
         channelSpy.close()
         result
