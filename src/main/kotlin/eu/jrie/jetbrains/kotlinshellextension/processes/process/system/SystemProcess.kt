@@ -4,6 +4,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.PCB
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
@@ -13,57 +14,61 @@ import org.apache.commons.io.output.NullOutputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.LogOutputStream
+import java.io.File
 import java.io.InputStream
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 class SystemProcess @TestOnly internal constructor (
     vPID: Int,
-    command: String,
-    arguments: List<String>,
+    val command: String,
+    val arguments: List<String>,
+    input: ProcessStream,
+    stdout: ProcessStream,
+    stderr: ProcessStream,
+    environment: Map<String, String>,
+    directory: File,
     scope: CoroutineScope,
     private val executor: ProcessExecutor
-) : Process(vPID, command, arguments, scope) {
+) : Process(vPID, input, stdout, stderr, environment, directory, scope) {
 
-    constructor(vPID: Int, command: String, arguments: List<String>, scope: CoroutineScope)
-            : this(vPID, command, arguments, scope, ProcessExecutor())
+    constructor(vPID: Int,
+                command: String,
+                arguments: List<String>,
+                input: ProcessStream,
+                stdout: ProcessStream,
+                stderr: ProcessStream,
+                environment: Map<String, String>,
+                directory: File,
+                scope: CoroutineScope
+    ) : this(vPID, command, arguments, input, stdout, stderr, environment, directory, scope, ProcessExecutor())
 
     override val pcb = SystemPCB()
 
     override val name: String
-        get() = "[${super.name} pid=${pcb.systemPID}]"
+        get() = "[${super.name} ${pcb.systemPID} $command]"
+
+    override val statusCmd: String
+        get() = command
+
+    override val statusOther: String
+        get() = "pid=${pcb.systemPID}"
 
     init {
         executor
             .command(listOf(command).plus(arguments))
             .destroyOnExit()
             .addListener(SystemProcessListener(this))
-    }
-
-    override fun redirectIn(source: ProcessInputStream) {
-        executor.redirectInput(SystemProcessInputStream(source))
-    }
-
-    override fun redirectMergedOut(destination: ProcessOutputStream) {
-        executor.redirectOutput(SystemProcessLogOutputStream(destination))
-    }
-
-    override fun redirectStdOut(destination: ProcessOutputStream) {
-        executor
-            .redirectOutput(SystemProcessLogOutputStream(destination))
-            .redirectError(NullOutputStream())
-    }
-
-    override fun redirectStdErr(destination: ProcessOutputStream)  {
-        executor.redirectError(SystemProcessLogOutputStream(destination))
+            .redirectInput(SystemProcessInputStream(input))
+            .redirectOutput()
+            .environment(environment)
+            .directory(directory)
     }
 
     override fun execute(): PCB {
-        val started = executor
-            .environment(environment())
-            .start()!!
+        val started = executor.start()!!
 
-        pcb.startTime = started.process.info().startInstant().orElse(Instant.MIN)
+        pcb.startTime = started.process.info().startInstant().orElse(Instant.now())
         pcb.systemPID = started.process.pid()
         pcb.startedProcess = started
 
@@ -90,19 +95,19 @@ class SystemProcess @TestOnly internal constructor (
     }
 
     internal class SystemProcessLogOutputStream (
-        private val processOutputStream: ProcessOutputStream
+        private val sink: ProcessInputStream
     ) : LogOutputStream() {
         override fun processLine(line: String?) {
-            if (line != null) processOutputStream.send(line)
+            if (line != null) sink.writeAsLine(line)
         }
     }
 
     internal class SystemProcessInputStream (
-        private val processInputStream: ProcessInputStream
+        private val tap: ProcessOutputStream
     ) : InputStream() {
         override fun read(): Int {
             return try {
-                processInputStream.read().toInt()
+                tap.read().toInt()
             }
             catch (e: ClosedReceiveChannelException) {
                 close()
@@ -110,4 +115,23 @@ class SystemProcess @TestOnly internal constructor (
             }
         }
     }
+
+    private fun ProcessExecutor.redirectOutput() = apply {
+        when (stdout) {
+            is NullOutputStream -> if (stderr !is NullOutputStream) redirectStdErr()
+            else -> {
+                when (stderr) {
+                    is NullOutputStream -> redirectStdOut()
+                    else -> {
+                        redirectStdOut()
+                        redirectStdErr()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout))
+
+    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr))
 }
