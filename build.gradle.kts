@@ -16,13 +16,13 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
     implementation("org.zeroturnaround:zt-exec:1.10")
-    implementation("org.apache.logging.log4j:log4j-core:2.12.0")
-    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.12.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-M2")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.0")
     testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("org.apache.logging.log4j:log4j-core:2.12.0")
+    testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.12.0")
 }
 
 sourceSets {
