@@ -1,6 +1,9 @@
 package eu.jrie.jetbrains.kotlinshellextension
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.KtsProcessConfiguration
+import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.ProcessConfiguration
+import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import kotlinx.coroutines.runBlocking
 
@@ -12,6 +15,14 @@ fun shell(script: ProcessCommander.() -> Unit) = runBlocking {
         .apply(script)
         .awaitAll()
 }
+
+fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration().apply(config).builder()
+
+fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = process(SystemProcessConfiguration().apply(config))
+
+fun launchKtsProcess(config: KtsProcessConfiguration.() -> Unit) = process(KtsProcessConfiguration().apply(config))
+
+fun process(config: ProcessConfiguration) = process(config.builder())
 
 fun process(builder: ProcessBuilder) = commander.process(builder)
 

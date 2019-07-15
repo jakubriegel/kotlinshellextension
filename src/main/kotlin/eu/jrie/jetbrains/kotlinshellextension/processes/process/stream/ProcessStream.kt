@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.annotations.TestOnly
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.File
 
 open class ProcessStream @TestOnly internal constructor(
 //    protected val scope: CoroutineScope
@@ -51,6 +52,13 @@ open class ProcessStream @TestOnly internal constructor(
         line.forEach { write(it) }
     }
 
+    override fun fromFile(file: File) = apply {
+        invokeOnReady {
+            write(file.readText())
+            close()
+        }
+    }
+
     override fun writeAsLine(data: ByteArray) = write(data.plus(LINE_END.toByte()))
 
     override fun writeNewLine() = writeAsLine(ByteArray(0))
@@ -72,6 +80,9 @@ open class ProcessStream @TestOnly internal constructor(
         logger.debug("subscribed to $name")
         return job
     }
+
+    @ExperimentalCoroutinesApi
+    override fun subscribe(file: File) = subscribe { file.bufferedWriter().write(it.toInt()) }
 
     @ExperimentalCoroutinesApi
     private suspend fun consume(onNext: (Byte) -> Unit, afterLast: () -> Unit) {

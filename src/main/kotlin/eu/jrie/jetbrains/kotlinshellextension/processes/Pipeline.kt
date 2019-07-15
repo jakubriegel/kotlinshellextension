@@ -3,7 +3,6 @@ package eu.jrie.jetbrains.kotlinshellextension.processes
 import eu.jrie.jetbrains.kotlinshellextension.process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -53,16 +52,7 @@ class Pipeline private constructor (
 
         internal fun fromFile(path: String, to: ProcessBuilder) = fromFile(File(path), to)
 
-        internal fun fromFile(file: File, to: ProcessBuilder) = to.apply {
-            followIn(
-                ProcessStream().apply {
-                    invokeOnReady {
-                        write(file.readText())
-                        close()
-                    }
-                }
-            )
-        }
+        internal fun fromFile(file: File, to: ProcessBuilder) = from(to.apply { followFile(file) })
     }
 
 }

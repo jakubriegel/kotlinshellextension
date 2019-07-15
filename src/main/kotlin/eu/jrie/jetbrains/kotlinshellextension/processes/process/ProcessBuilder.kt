@@ -3,6 +3,7 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.NullProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
 abstract class ProcessBuilder  {
@@ -13,9 +14,11 @@ abstract class ProcessBuilder  {
     protected var stdout: ProcessStream = NullProcessStream()
     protected var stderr: ProcessStream = NullProcessStream()
 
-    protected var directory = currentDir()
+    var directory = currentDir()
+        protected set
 
     protected val environment = mutableMapOf<String, String>()
+    fun environment() = environment.toMap()
 
     protected lateinit var scope: CoroutineScope
 
@@ -41,21 +44,36 @@ abstract class ProcessBuilder  {
     fun followIn(source: ProcessStream) = apply { input = source }
 
     /**
-     * Will redirect merged stdout and stderr of created process to the new [ProcessStream]
+     * Will set given [File] as input of created [Process]
+     *
+     * @return this builder
+     */
+    fun followFile(file: File) = followIn(ProcessStream().fromFile(file))
+
+    /**
+     * Will redirect merged stdout and stderr of created [Process] to the new [ProcessStream]
      *
      * @return this builder
      */
     fun followMergedOut() = followMergedOut(ProcessStream())
 
     /**
-     * Will redirect merged stdout and stderr of created process to the given [ProcessStream]
+     * Will redirect merged stdout and stderr of created [Process] to the given [ProcessStream]
      *
      * @return this builder
      */
-    fun followMergedOut(destination: ProcessStream) = apply { stdout = destination }
+    fun followMergedOut(stream: ProcessStream) = apply { stdout = stream }
 
     /**
-     * Will redirect merged stdout and stderr of created process to 2 separated new [ProcessStream]s
+     * Will redirect merged stdout and stderr of created [Process] to the given [File]
+     *
+     * @return this builder
+     */
+    @ExperimentalCoroutinesApi
+    fun followMergedOut(file: File) = followMergedOut(ProcessStream().apply { subscribe(file) } )
+
+    /**
+     * Will redirect separated stdout and stderr of created [Process] to 2 separated new [ProcessStream]s
      *
      * @return this builder
      */
@@ -65,42 +83,73 @@ abstract class ProcessBuilder  {
     }
 
     /**
-     * Will redirect merged stdout and stderr of created process to given [ProcessStream]s
+     * Will redirect separated stdout and stderr of created [Process] to given [ProcessStream]s
      *
      * @return this builder
      */
-    fun followOut(stdDestination: ProcessStream, errDestination: ProcessStream) = apply {
-        followStdOut(stdDestination)
-        followStdErr(errDestination)
+    fun followOut(stdStream: ProcessStream, errStream: ProcessStream) = apply {
+        followStdOut(stdStream)
+        followStdErr(errStream)
     }
 
     /**
-     * Will redirect stdout of created process to the new [ProcessStream]
+     * Will redirect separated stdout and stderr of created [Process] to given [File]s
+     *
+     * @return this builder
+     */
+    @ExperimentalCoroutinesApi
+    fun followOut(stdFile: File, errFile: File) = followOut(
+        ProcessStream().apply { subscribe(stdFile) },
+        ProcessStream().apply { subscribe(errFile) }
+    )
+
+    /**
+     * Will redirect stdout of created [Process] to the new [ProcessStream]
      *
      * @return this builder
      */
     fun followStdOut() = followStdOut(ProcessStream())
 
     /**
-     * Will redirect stdout of created process to the given [ProcessStream]
+     * Will redirect stdout of created [Process] to the given [ProcessStream]
      *
      * @return this builder
      */
-    fun followStdOut(destination: ProcessStream) = apply { stdout = destination }
+    fun followStdOut(stream: ProcessStream) = apply { stdout = stream }
 
     /**
-     * Will redirect stderr of created process to the new [ProcessStream]
+     * Will redirect stdout of created [Process] to the given [File]
+     *
+     * @return this builder
+     */
+    @ExperimentalCoroutinesApi
+    fun followStdOut(file: File) = apply {
+        followStdOut(ProcessStream().apply { subscribe(file) })
+    }
+
+    /**
+     * Will redirect stderr of created [Process] to the new [ProcessStream]
      *
      * @return this builder
      */
     fun followStdErr() = followStdErr(ProcessStream())
 
     /**
-     * Will redirect stderr of created process to the given [ProcessStream]
+     * Will redirect stderr of created [Process] to the given [ProcessStream]
      *
      * @return this builder
      */
-    fun followStdErr(destination: ProcessStream) = apply { stderr = destination }
+    fun followStdErr(stream: ProcessStream) = apply { stderr = stream }
+
+    /**
+     * Will redirect stderr of created [Process] to the given [File]
+     *
+     * @return this builder
+     */
+    @ExperimentalCoroutinesApi
+    fun followStdErr(file: File) = apply {
+        followStdErr(ProcessStream().apply { subscribe(file) })
+    }
 
     /**
      * Adds new variable to the environment.
@@ -153,7 +202,7 @@ abstract class ProcessBuilder  {
     /**
      * Sets execution directory
      *
-     * @param dir directory to execute the process from
+     * @param dir directory to execute the [Process] from
      * @return this builder
      */
     fun withDir(dir: File) = apply {
@@ -162,14 +211,14 @@ abstract class ProcessBuilder  {
     }
 
     /**
-     * Sets coroutine scope of created process to given scope
+     * Sets coroutine scope of created [Process] to given scope
      *
      * @return this builder
      */
     internal fun withScope(scope: CoroutineScope) = apply { this.scope = scope }
 
     /**
-     * Builds a process from this builder
+     * Builds a [Process] from this builder
      *
      * @return new running [Process]
      */

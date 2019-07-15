@@ -1,10 +1,14 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.stream
 
+import java.io.File
+
 interface ProcessInputStream {
 
     fun write(line: String)
 
     fun write(line: ByteArray)
+
+    fun fromFile(file: File): ProcessStream
 
     suspend fun write(b: Byte)
 
