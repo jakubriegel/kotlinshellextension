@@ -18,6 +18,7 @@ dependencies {
     implementation("org.zeroturnaround:zt-exec:1.10")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-M2")
+    implementation("org.jetbrains.kotlinx:kotlinx-io-jvm:0.1.11")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.0")
     testImplementation("io.mockk:mockk:1.9.3")

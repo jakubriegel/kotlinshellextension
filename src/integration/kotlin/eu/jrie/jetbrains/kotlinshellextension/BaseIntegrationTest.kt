@@ -1,12 +1,20 @@
 package eu.jrie.jetbrains.kotlinshellextension
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import java.io.File
 
 abstract class BaseIntegrationTest {
+
+    protected val vPID = 1
 
     protected val command = "cmd"
     protected val argument = "arg"
@@ -17,30 +25,59 @@ abstract class BaseIntegrationTest {
     protected val env3 = "var3" to "val3"
     protected val environment = mapOf(env1, env2, env3)
 
-    protected val testDirectory = File(testDirPath)
-    protected val directory = "$testDirPath/${this::class.simpleName}Dir"
-    protected val directoryFile = File(directory)
+
+    protected val directoryPath = "$testDirPath/${this::class.simpleName}Dir"
+    protected val directory = File(directoryPath)
 
     private lateinit var commander: ProcessCommander
+    protected lateinit var scope: CoroutineScope
+        private set
 
     @BeforeEach
-    fun createDir() {
-        testDirectory.mkdirs()
-        directoryFile.mkdirs()
-        print("")
+    fun init() {
+        directory.mkdirs()
     }
 
     @AfterEach
     fun cleanup() {
-        testDirectory.deleteRecursively()
+        directory.deleteRecursively()
     }
 
-    protected fun <T> runTest(test: () -> T) = runBlocking {
+    fun file(name: String = "testfile", content: String = "") = File("$directoryPath/$name").also {
+        it.writeText(content)
+        it.createNewFile()
+    }
+
+    fun dir(name: String = "testdir") = File("$directoryPath/$name").also {
+        it.mkdirs()
+    }
+
+    protected fun <T> testBlocking(test: suspend () -> T) = runBlocking {
         commander = ProcessCommander(this)
-        test()
+        scope = commander.scope
+        withContext(Dispatchers.Default) { test() }
     }
 
     companion object {
+
+        protected val testDirectory = File(testDirPath)
+
+        @BeforeAll
+        @JvmStatic
+        fun initTestClass() {
+            testDirectory.deleteRecursively()
+            testDirectory.mkdirs()
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun cleanupTestClass() {
+            testDirectory.deleteRecursively()
+        }
+
+        fun assertRegex(regex: Regex, value: String) {
+            assertTrue(regex.containsMatchIn(value))
+        }
 
         private val testDirPath: String
             get() = "${System.getProperty("user.dir")}/testdata"

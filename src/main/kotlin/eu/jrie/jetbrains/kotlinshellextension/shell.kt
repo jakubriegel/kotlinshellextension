@@ -18,7 +18,9 @@ fun shell(script: ProcessCommander.() -> Unit) = runBlocking {
 
 fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration().apply(config).builder()
 
-fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = process(SystemProcessConfiguration().apply(config))
+fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = process(
+    SystemProcessConfiguration().apply(config)
+).apply { start() }
 
 fun launchKtsProcess(config: KtsProcessConfiguration.() -> Unit) = process(KtsProcessConfiguration().apply(config))
 

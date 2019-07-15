@@ -10,9 +10,12 @@ abstract class ProcessBuilder  {
 
     protected var vPID: Int = -1
 
-    protected var input: ProcessStream = NullProcessStream()
-    protected var stdout: ProcessStream = NullProcessStream()
-    protected var stderr: ProcessStream = NullProcessStream()
+    var input: ProcessStream = NullProcessStream()
+        protected set
+    var stdout: ProcessStream = NullProcessStream()
+        protected set
+    var stderr: ProcessStream = NullProcessStream()
+        protected set
 
     var directory = currentDir()
         protected set
@@ -70,7 +73,7 @@ abstract class ProcessBuilder  {
      * @return this builder
      */
     @ExperimentalCoroutinesApi
-    fun followMergedOut(file: File) = followMergedOut(ProcessStream().apply { subscribe(file) } )
+    fun followMergedOut(file: File) = followMergedOut(ProcessStream().apply { invokeOnReady { subscribe(file) } } )
 
     /**
      * Will redirect separated stdout and stderr of created [Process] to 2 separated new [ProcessStream]s
@@ -99,8 +102,8 @@ abstract class ProcessBuilder  {
      */
     @ExperimentalCoroutinesApi
     fun followOut(stdFile: File, errFile: File) = followOut(
-        ProcessStream().apply { subscribe(stdFile) },
-        ProcessStream().apply { subscribe(errFile) }
+        ProcessStream().apply { invokeOnReady { subscribe(stdFile) } },
+        ProcessStream().apply { invokeOnReady { subscribe(errFile) } }
     )
 
     /**
@@ -124,7 +127,7 @@ abstract class ProcessBuilder  {
      */
     @ExperimentalCoroutinesApi
     fun followStdOut(file: File) = apply {
-        followStdOut(ProcessStream().apply { subscribe(file) })
+        followStdOut(ProcessStream().apply { invokeOnReady { subscribe(file) } })
     }
 
     /**
@@ -148,7 +151,7 @@ abstract class ProcessBuilder  {
      */
     @ExperimentalCoroutinesApi
     fun followStdErr(file: File) = apply {
-        followStdErr(ProcessStream().apply { subscribe(file) })
+        followStdErr(ProcessStream().apply { invokeOnReady { subscribe(file) } })
     }
 
     /**
