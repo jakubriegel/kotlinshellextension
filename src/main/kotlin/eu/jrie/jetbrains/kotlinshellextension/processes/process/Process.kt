@@ -26,7 +26,7 @@ abstract class Process protected constructor (
         get() = "[${this::class.simpleName} $vPID]"
 
     val status: String
-        get() = "$vPID\t${since(pcb.startTime)}\t$statusCmd\t$statusOther"
+        get() = "$vPID\t${since(pcb.startTime)}\t$statusCmd\t$statusOther state=${pcb.state}"
 
     protected abstract val statusCmd: String
     protected abstract val statusOther: String
