@@ -23,12 +23,19 @@ open class ProcessStream @TestOnly internal constructor(
 
     private val vPIDs = mutableListOf<Int>()
 
+    private var onReady: ProcessStream.() -> Unit = {}
+
     val name: String
         get() = "[${this::class.simpleName} ${vPIDs.joinToString()}]"
 
     fun initialize(vPID: Int, scope: CoroutineScope) {
         vPIDs.add(vPID)
         if (!this::scope.isInitialized) this.scope = scope
+        onReady()
+    }
+
+    fun invokeOnReady(action: ProcessStream.() -> Unit) {
+        onReady = action
     }
 
     fun close() {

@@ -42,6 +42,25 @@ class ProcessStreamTest {
     }
 
     @Test
+    fun `should invoke after initialization`() = runBlocking {
+        // given
+        val context = this.coroutineContext
+        val scopeMock = mockk<CoroutineScope> {
+            every { coroutineContext } returns context
+        }
+        
+        var invoked = false
+        val action = { invoked = true }
+        stream.invokeOnReady { action() }
+
+        // when
+        stream.initialize(VIRTUAL_PID, scopeMock)
+
+        // then
+        assertTrue(invoked)
+    }
+
+    @Test
     @ExperimentalCoroutinesApi
     fun `should close channel`() {
         // when
