@@ -56,4 +56,36 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
         assertRegex(dirRegex, result)
         assertRegex(fileRegex, result)
     }
+
+    @Test
+    @ExperimentalCoroutinesApi
+    fun `should await process`() {
+        // given
+        val scriptCode = "for (( i = 0; i < 1000; ++i )); do\n" +
+                         "    echo hello\n" +
+                         "done\n"
+
+        val scriptName = "script"
+        file(scriptName, scriptCode)
+
+        // when
+        shell {
+            val chmod = launchSystemProcess {
+                cmd {
+                    "chmod" withArgs listOf("+x", scriptName)
+                }
+                dir(directory)
+            }
+            commander.awaitProcess(chmod)
+
+            val script = launchSystemProcess {
+                cmd = "./$scriptName"
+                output {
+                    followStd() andDo storeResult
+                }
+                dir(directory)
+            }
+            commander.awaitProcess(script)
+        }
+    }
 }

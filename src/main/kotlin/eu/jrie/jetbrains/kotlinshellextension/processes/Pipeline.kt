@@ -1,45 +1,90 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes
 
+import eu.jrie.jetbrains.kotlinshellextension.ShellPiping
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
+/**
+ * The entity representing pipeline.
+ * Should be used with piping DSL
+ *
+ * @see ShellPiping
+ */
 class Pipeline private constructor (
-//    private val scope: CoroutineScope
     private val commander: ProcessCommander
 ) {
 
     val processLine = mutableListOf<Process>()
 
-    internal fun toProcess(to: ProcessBuilder) = apply {
+    /**
+     * Adds [process] to this [Pipeline]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    fun toProcess(process: ProcessBuilder) = apply {
         processLine.add(
             commander.process(
-                to
+                process
                     .followIn(processLine.last().stdout)
                     .followStdOut()
             ).apply { start() }
         )
     }
-    
+
+    /**
+     * Ends this [Pipeline] with [lambda]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
     @ExperimentalCoroutinesApi
-    internal fun toFile(to: File) = appendFile(
-        to.apply { delete() }
+    fun toLambda(lambda: (Byte) -> Unit) = apply {
+        processLine.last().stdout.subscribe(lambda)
+    }
+
+    /**
+     * Ends this [Pipeline] with writing its output to [file]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    fun toFile(file: File) = appendFile(
+        file.apply { delete() }
     )
 
+    /**
+     * Ends this [Pipeline] with appending its output to [file]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
     @ExperimentalCoroutinesApi
-    internal fun appendFile(to: File) = apply {
+    fun appendFile(file: File) = apply {
         processLine.last().stdout.subscribe {
-            to.appendBytes(ByteArray(1) { _ -> it })
+            file.appendBytes(ByteArray(1) { _ -> it })
         }
     }
 
-    fun await() = runBlocking (commander.scope.coroutineContext) {
-        processLine.forEach { it.await().join() }
+    /**
+     * Awaits all processes in this [Pipeline]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun await() {
+        processLine.forEach { commander.awaitProcess(it) }
     }
 
     companion object {
+        /**
+         * Starts new [Pipeline] with process specified by given [start] [ProcessBuilder]
+         *
+         * @see ShellPiping
+         */
         internal fun from(start: ProcessBuilder, commander: ProcessCommander): Pipeline {
             start.followStdOut()
 
@@ -49,9 +94,19 @@ class Pipeline private constructor (
             return pipeline
         }
 
-        internal fun fromFile(path: String, to: ProcessBuilder, commander: ProcessCommander) = fromFile(File(path), to, commander)
+        /**
+         * Starts new [Pipeline] with [File] specified by [path] as input of [process]
+         *
+         * @see ShellPiping
+         */
+        internal fun fromFile(path: String, process: ProcessBuilder, commander: ProcessCommander) = fromFile(File(path), process, commander)
 
-        internal fun fromFile(file: File, to: ProcessBuilder, commander: ProcessCommander) = from(to.followFile(file), commander)
+        /**
+         * Starts new [Pipeline] with [file] as input of [process]
+         *
+         * @see ShellPiping
+         */
+        internal fun fromFile(file: File, process: ProcessBuilder, commander: ProcessCommander) = from(process.followFile(file), commander)
     }
 
 }

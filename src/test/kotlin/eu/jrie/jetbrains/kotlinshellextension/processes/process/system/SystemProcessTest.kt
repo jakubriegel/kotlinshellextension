@@ -124,7 +124,9 @@ class SystemProcessTest {
         // given
         val p = processWithGivenScope(this)
         val futureMock = mockk<Future<ProcessResult>> {
-            every { get() } returns mockk()
+            every { get() } returns mockk {
+                every { exitValue } returns 0
+            }
         }
 
         p.pcb.startedProcess = mockk {
@@ -133,7 +135,7 @@ class SystemProcessTest {
         }
 
         // when
-        p.await().join()
+        p.await()
 
         // then
         verify (exactly = 1) { futureMock.get() }
@@ -147,7 +149,9 @@ class SystemProcessTest {
         val timeout: Long = 500
 
         val futureMock = mockk<Future<ProcessResult>> {
-            every { get(timeout, TimeUnit.MILLISECONDS) } returns mockk()
+            every { get(timeout, TimeUnit.MILLISECONDS) } returns mockk {
+                every { exitValue } returns 0
+            }
         }
 
         p.pcb.startedProcess = mockk {
@@ -156,7 +160,7 @@ class SystemProcessTest {
         }
 
         // when
-        p.await(timeout).join()
+        p.await(timeout)
 
         // then
         verify (exactly = 1) { futureMock.get(timeout, TimeUnit.MILLISECONDS) }
@@ -178,7 +182,7 @@ class SystemProcessTest {
         }
 
         // when
-        p.await().join()
+        p.await()
 
         // then
         verify (exactly = 0) { futureMock.get() }
@@ -200,7 +204,7 @@ class SystemProcessTest {
         process.pcb.startedProcess = startedProcessMock
 
         // when
-        process.destroy()
+        process.kill()
 
         // then
         verify { processMock.isAlive }
@@ -227,7 +231,7 @@ class SystemProcessTest {
         process.pcb.startedProcess = startedProcessMock
 
         // when
-        assertThrows<Exception> { process.destroy() }
+        assertThrows<Exception> { process.kill() }
 
         // then
         verify { processMock.isAlive }
@@ -252,7 +256,7 @@ class SystemProcessTest {
         process.pcb.startedProcess = startedProcessMock
 
         // when
-        process.destroy()
+        process.kill()
 
         // then
         verify { processMock.isAlive }

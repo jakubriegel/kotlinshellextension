@@ -8,8 +8,6 @@ import io.mockk.just
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -94,13 +92,13 @@ class ProcessTest {
     @Test
     fun `should await process`() = runBlocking {
         val timeout: Long = 500
-        every { process.expect(timeout) } returns launch { }
+        every { process.isAlive() } returns true
 
         // when
-        process.await(timeout).join()
+        process.await(timeout)
 
         // then
-        assertEquals(process.pcb.state, ProcessState.TERMINATED)
+        assertEquals(ProcessState.TERMINATED, process.pcb.state)
     }
 
     @Test
@@ -128,7 +126,7 @@ class ProcessTest {
 
         override fun execute(): PCB = spyk()
         override fun isAlive(): Boolean = false
-        override fun expect(timeout: Long): Job = spyk()
+        override suspend fun expect(timeout: Long) {}
         override fun destroy() {}
     }
 

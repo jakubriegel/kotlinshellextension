@@ -2,6 +2,7 @@ package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.shell
+import eu.jrie.jetbrains.kotlinshellextension.stdout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -155,5 +156,20 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
 
         // then
         states.forEach { assertEquals(ProcessState.TERMINATED.name, it) }
+    }
+
+    @Test
+    @ExperimentalCoroutinesApi
+    fun `should pipe to console`() {
+        // when
+        shell {
+            val echo = systemProcess {
+                cmd {
+                    "echo" withArg "abc"
+                }
+            }
+
+            echo pipe stdout
+        }
     }
 }

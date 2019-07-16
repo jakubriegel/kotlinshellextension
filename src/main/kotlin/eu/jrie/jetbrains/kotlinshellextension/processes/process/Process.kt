@@ -2,7 +2,6 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -17,7 +16,7 @@ abstract class Process protected constructor (
     val stderr: ProcessStream,
     val environment: Map<String, String>,
     val directory: File,
-    val scope: CoroutineScope
+    protected val scope: CoroutineScope
 ) {
 
     abstract val pcb: PCB
@@ -37,7 +36,7 @@ abstract class Process protected constructor (
         stderr.initialize(vPID, scope)
     }
 
-    fun start(): PCB {
+    internal fun start(): PCB {
         return if (pcb.state != ProcessState.READY) {
             throw Exception("only READY process can be started")
         }
@@ -53,20 +52,20 @@ abstract class Process protected constructor (
 
     abstract fun isAlive(): Boolean
 
+    @Deprecated("isAlive() should be checked directly due to suspend functions", ReplaceWith("if (isAlive()) action()"))
     fun ifAlive(action: () -> Unit) {
         if (isAlive()) action()
     }
 
-    fun await(timeout: Long = 0): Job {
-        val awaitJob = expect(timeout)
-        awaitJob.invokeOnCompletion {
+    internal suspend fun await(timeout: Long = 0) {
+        if (isAlive()) {
+            expect(timeout)
+            pcb.endTime = Instant.now()
             pcb.state = ProcessState.TERMINATED
-            logger.debug("awaited process $name")
         }
-        return awaitJob
     }
 
-    abstract fun expect(timeout: Long): Job
+    protected abstract suspend fun expect(timeout: Long)
 
     internal fun closeOut() {
         stdout.close()
@@ -74,13 +73,13 @@ abstract class Process protected constructor (
         logger.debug("closed out of $name")
     }
 
-    fun kill() {
+    internal fun kill() {
         destroy()
         pcb.state = ProcessState.TERMINATED
         logger.debug("killed process $name")
     }
 
-    abstract fun destroy()
+    protected abstract fun destroy()
 
     companion object {
         @JvmStatic

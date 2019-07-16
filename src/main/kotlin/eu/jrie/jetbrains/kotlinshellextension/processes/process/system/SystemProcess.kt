@@ -6,10 +6,10 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessIn
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.withContext
 import org.apache.commons.io.output.NullOutputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
@@ -77,12 +77,13 @@ class SystemProcess @TestOnly internal constructor (
 
     override fun isAlive() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
 
-    @ObsoleteCoroutinesApi // TODO: implement process management in nonblocking way
-    override fun expect(timeout: Long) = scope.launch (newSingleThreadContext("$vPID $command join")) {
-        ifAlive {
+    @ObsoleteCoroutinesApi
+    override suspend fun expect(timeout: Long) {
+        withContext(Dispatchers.Default) {
             with(pcb.startedProcess!!) {
-                if (timeout.compareTo(0) == 0) future.get()
+                val result = if (timeout.compareTo(0) == 0) future.get()
                 else future.get(timeout, TimeUnit.MILLISECONDS)
+                pcb.exitCode = result.exitValue
             }
         }
     }
