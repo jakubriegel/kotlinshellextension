@@ -2,14 +2,10 @@ package eu.jrie.jetbrains.kotlinshellextension.processes
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessConfiguration
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+
 
 class ProcessCommander (
     val scope: CoroutineScope
@@ -17,20 +13,13 @@ class ProcessCommander (
 
     private val processes = mutableSetOf<Process>()
 
-    fun systemProcess(config: ProcessConfiguration.() -> Unit) =
-        createSystemProcess(config).let {
-            processes.add(it)
-            it.vPID
-        }
-
-    fun processInputStream() = ProcessInputStream(scope)
-
-    fun processOutputStream() = ProcessOutputStream(scope)
-
-    private fun createSystemProcess(config: ProcessConfiguration.() -> Unit) =
-        with(ProcessConfiguration().apply(config)) {
-            ProcessBuilder.createSystemProcess(this, virtualPID(), scope)
-        }
+    fun process(builder: ProcessBuilder): Process {
+        return builder
+            .withVirtualPID(virtualPID())
+            .withScope(scope)
+            .build()
+            .also { processes.add(it) }
+    }
 
     fun startProcess(vPID: Int) = startProcess(getProcessByVirtualPID(vPID))
 
@@ -42,8 +31,11 @@ class ProcessCommander (
         awaitProcess(getProcessByVirtualPID(vPID), timeout)
     }
 
-    fun awaitProcess(process: Process, timeout: Long = 0) = runBlocking (scope.coroutineContext) {
-        process.await(timeout).join()
+    fun awaitProcess(process: Process, timeout: Long = 0) {
+        if (!processes.contains(process)) throw Exception("unknown process")
+        return runBlocking (scope.coroutineContext) {
+            process.await(timeout).join()
+        }
     }
 
     fun awaitAll() {
@@ -57,70 +49,23 @@ class ProcessCommander (
     }
 
     fun killProcess(process: Process) {
+        if (!processes.contains(process)) throw Exception("unknown process")
         process.kill()
     }
 
-    @ExperimentalCoroutinesApi
-    fun pipe(vPID1: Int, vPID2: Int) = scope.launch{
-        pipe(
-            getProcessByVirtualPID(vPID1),
-            getProcessByVirtualPID(vPID2)
-        )
+    fun killAll() {
+        logger.debug("killing all processes")
+        processes.forEach { killProcess(it) }
+        logger.debug("all processes killed")
     }
 
-    @ExperimentalCoroutinesApi
-    fun pipe(vPID1: Int, vPID2: Int, tap: (Byte) -> Unit) = scope.launch{
-        pipe(
-            getProcessByVirtualPID(vPID1),
-            getProcessByVirtualPID(vPID2),
-            tap
-        )
-    }
-
-    @ExperimentalCoroutinesApi
-    suspend fun pipe(first: Process, second: Process, tap: (Byte) -> Unit) {
-        pipe(first, second)
-        second.stdout.subscribe(tap)
-    }
-
-    @ExperimentalCoroutinesApi
-    suspend fun pipe(first: Process, second: Process) {
-        if (!first.isAlive()) startProcess(first)
-        first.stdout.subscribe(
-            { second.input.writeBlocking(it) },
-            { second.input.close() }
-        )
-
-        if (!second.isAlive()) startProcess(second)
-    }
-
-    @ExperimentalCoroutinesApi
-    fun pipe(vararg vPIDs: Int, tap: (Byte) -> Unit) = runBlocking(scope.coroutineContext) {
-        val processes = vPIDs
-            .map { getProcessByVirtualPID(it) }
-            .toTypedArray()
-
-        pipe(*processes) { tap(it) }
-    }
-
-    @ExperimentalCoroutinesApi
-    fun pipe(vararg processes: Process, tap: (Byte) -> Unit) = runBlocking(scope.coroutineContext) {
-        pipe(0, 1, tap, processes)
-    }
-
-    @ExperimentalCoroutinesApi
-    private tailrec suspend fun pipe(p1: Int, p2: Int, tap: (Byte) -> Unit, processes: Array<out Process>) {
-        if (p2 == processes.lastIndex) {
-            pipe(processes[p1], processes[p2], tap)
-        }
-        else {
-            pipe(processes[p1], processes[p2])
-            pipe(p2, p2+1, tap, processes)
-        }
-    }
-
-    fun getProcessByVirtualPID(vPID: Int) =
+    private fun getProcessByVirtualPID(vPID: Int) =
         processes.find { it.vPID == vPID } ?: throw Exception("no processes with given virtual PID: $vPID")
+
+    internal fun status() = processes.joinToString (
+        "\n",
+        "PID\tTIME\t    CMD\n"
+    ) { it.status }
 
     companion object {
         private var nextVirtualPID = 1

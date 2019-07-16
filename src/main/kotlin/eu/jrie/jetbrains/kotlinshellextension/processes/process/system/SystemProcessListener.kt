@@ -10,7 +10,7 @@ class SystemProcessListener (
 
     private fun finalizeProcess() {
         systemProcess.closeOut()
-        logger.debug("finalized SystemProcess ${systemProcess.name}")
+        logger.debug("finalized ${systemProcess.name}")
     }
 
     companion object {

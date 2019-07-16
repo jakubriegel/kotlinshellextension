@@ -1,7 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
+import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.SYSTEM_PID
@@ -11,11 +11,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import io.mockk.verifyOrder
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import org.apache.commons.io.output.NullOutputStream
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -23,113 +21,43 @@ import org.junit.jupiter.api.assertThrows
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.ProcessResult
 import org.zeroturnaround.exec.StartedProcess
-import org.zeroturnaround.exec.listener.DestroyerListenerAdapter
-import org.zeroturnaround.exec.listener.ShutdownHookProcessDestroyer
+import java.io.File
 import java.util.*
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
 class SystemProcessTest {
     private val executorMock = spyk<ProcessExecutor>()
-    private val process = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, mockk(), executorMock)
+    private val input = ProcessStream()
+    private val stdout = ProcessStream()
+    private val stderr = ProcessStream()
+    private val directory = File("")
+
+    private val process = SystemProcess(
+        VIRTUAL_PID,
+        PROCESS_COMMAND,
+        PROCESS_ARGS,
+        input,
+        stdout,
+        stderr,
+        ENVIRONMENT,
+        directory,
+        spyk(),
+        executorMock
+    )
 
     @Test
     fun `should initialize the executor`() {
         verify (exactly = 1) {
-
-            // custom calls
             executorMock.command(listOf(PROCESS_COMMAND).plus(PROCESS_ARGS))
             executorMock.destroyOnExit()
             executorMock.addListener(ofType(SystemProcessListener::class))
-
-            // default calls
-            executorMock.destroyer(ofType(ShutdownHookProcessDestroyer::class))
-            executorMock.removeListeners(any())
-            executorMock.addListener(ofType(DestroyerListenerAdapter::class))
-        }
-        confirmVerified(executorMock)
-    }
-
-    @Test
-    fun `should redirect input`() {
-        // given
-        val inputSpy = spyk(ProcessInputStream(mockk()))
-
-        // when
-        process.followIn(inputSpy)
-
-        // then
-        verify (exactly = 1) { executorMock.redirectInput(ofType(SystemProcess.SystemProcessInputStream::class)) }
-
-        assertEquals(inputSpy.vPID, VIRTUAL_PID)
-    }
-
-    @Test
-    fun `should redirect merged output`() {
-        // given
-        val outputSpy = spyk(ProcessOutputStream(mockk()))
-
-        // when
-        process.followMergedOut(outputSpy)
-
-        // then
-        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
-        verify (exactly = 0) { executorMock.redirectError(any()) }
-
-        assertEquals(outputSpy.vPID, VIRTUAL_PID)
-    }
-
-    @Test
-    fun `should redirect only stdout`() {
-        // given
-        val outputSpy = spyk(ProcessOutputStream(mockk()))
-
-        // when
-        process.followStdOut(outputSpy)
-
-        // then
-        verify (exactly = 0) { executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
-        verify (exactly = 1) {
+            executorMock.redirectInput(ofType(SystemProcess.SystemProcessInputStream::class))
             executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class))
-            executorMock.redirectError(ofType(NullOutputStream::class))
+            executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class))
+            executorMock.environment(ENVIRONMENT)
+            executorMock.directory(directory)
         }
-
-        assertEquals(outputSpy.vPID, VIRTUAL_PID)
-    }
-
-    @Test
-    fun `should redirect only stderr`() {
-        // given
-        val outputSpy = spyk(ProcessOutputStream(mockk()))
-
-        // when
-        process.followStdErr(outputSpy)
-
-        // then
-        verify (exactly = 1) { executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
-        verify (exactly = 0) { executorMock.redirectError(ofType(NullOutputStream::class)) }
-        verify (exactly = 0) { executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
-
-        assertEquals(outputSpy.vPID, VIRTUAL_PID)
-    }
-
-    @Test
-    fun `should redirect stdout and stderr to separated streams`() {
-        // given
-        val stdOutputSpy = spyk(ProcessOutputStream(mockk()))
-        val errOutputSpy = spyk(ProcessOutputStream(mockk()))
-
-        // when
-        process.followOut(stdOutputSpy, errOutputSpy)
-
-        // then
-        verify (exactly = 1) { executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
-        verify (exactly = 1) { executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class)) }
-
-        assertEquals(stdOutputSpy.vPID, VIRTUAL_PID)
-        assertEquals(errOutputSpy.vPID, VIRTUAL_PID)
-        assertEquals(process.stdout, stdOutputSpy)
-        assertEquals(process.stderr, errOutputSpy)
     }
 
     @Test
@@ -147,10 +75,7 @@ class SystemProcessTest {
         process.start()
 
         // then
-        verifyOrder {
-            executorMock.environment(process.environment())
-            executorMock.start()
-        }
+        verify (exactly = 1) { executorMock.start() }
     }
 
     @Test
@@ -197,7 +122,7 @@ class SystemProcessTest {
     @ObsoleteCoroutinesApi
     fun `should blocking await process`() = runBlocking {
         // given
-        val p = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, this, spyk())
+        val p = processWithGivenScope(this)
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk()
         }
@@ -218,7 +143,7 @@ class SystemProcessTest {
     @ObsoleteCoroutinesApi
     fun `should await process with given timeout`() = runBlocking {
         // given
-        val p = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, this, spyk())
+        val p = processWithGivenScope(this)
         val timeout: Long = 500
 
         val futureMock = mockk<Future<ProcessResult>> {
@@ -242,7 +167,7 @@ class SystemProcessTest {
     @ObsoleteCoroutinesApi
     fun `should not await not alive process`() = runBlocking {
         // given
-        val p = SystemProcess(VIRTUAL_PID, PROCESS_COMMAND, PROCESS_ARGS, this, spyk())
+        val p = processWithGivenScope(this)
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk()
         }
@@ -339,4 +264,16 @@ class SystemProcessTest {
         confirmVerified(futureMock)
     }
 
+    private fun processWithGivenScope(scope: CoroutineScope) = SystemProcess(
+            VIRTUAL_PID,
+            PROCESS_COMMAND,
+            PROCESS_ARGS,
+            input,
+            stdout,
+            stderr,
+            ENVIRONMENT,
+            directory,
+            scope,
+            spyk()
+        )
 }
