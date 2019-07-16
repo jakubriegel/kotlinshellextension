@@ -5,8 +5,9 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProc
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.NullProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.systemProcess
+import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.jetbrains.annotations.TestOnly
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertIterableEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -460,6 +461,13 @@ class SystemProcessDSLIntegrationTest : BaseIntegrationTest() {
         // then
         assertEquals(directoryPath, process.directory.path)
     }
-    
-    private fun create(config: SystemProcessConfiguration.() -> Unit) = systemProcess(config) as SystemProcessBuilder
+
+    @TestOnly
+    private fun create(config: SystemProcessConfiguration.() -> Unit): SystemProcessBuilder {
+        var processBuilder: SystemProcessBuilder? = null
+        shell {
+            processBuilder = systemProcess(config) as SystemProcessBuilder
+        }
+        return processBuilder ?: throw NullPointerException("process builder did not initialized correctly")
+    }
 }

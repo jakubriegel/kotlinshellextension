@@ -86,5 +86,11 @@ abstract class BaseIntegrationTest {
             val path = System.getProperty("user.dir")
             return File(path)
         }
+
+        const val LOREM_IPSUM = "Lorem ipsum dolor sit amet,\n" +
+                                "consectetur adipiscing elit.\n" +
+                                "Etiam sed pharetra enim.\n" +
+                                "Duis rhoncus purus sed lorem finibus,\n" +
+                                "nec gravida.\n"
     }
 }
