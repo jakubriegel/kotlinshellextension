@@ -16,7 +16,14 @@ class Pipeline private constructor (
     private val commander: ProcessCommander
 ) {
 
-    val processLine = mutableListOf<Process>()
+    private val processLine = mutableListOf<Process>()
+
+    /**
+     * Read only list of [Process]es added to this [Pipeline].
+     * Most recent [Process] is at the end of the list
+     */
+    val processes: List<Process>
+        get() = processLine.toList()
 
     /**
      * Adds [process] to this [Pipeline]
@@ -75,7 +82,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    suspend fun await() {
+    suspend fun await() = apply {
         processLine.forEach { commander.awaitProcess(it) }
     }
 

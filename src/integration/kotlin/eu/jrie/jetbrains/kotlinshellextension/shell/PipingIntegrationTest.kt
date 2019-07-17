@@ -151,7 +151,7 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
 
             val pipeline = file pipe grep pipe wc pipe storeResult
             pipeline.await()
-            pipeline.processLine.forEach { states.add(it.pcb.state.name) }
+            pipeline.processes.forEach { states.add(it.pcb.state.name) }
         }
 
         // then
@@ -171,5 +171,32 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
 
             echo pipe stdout
         }
+    }
+
+    @Test
+    @ExperimentalCoroutinesApi
+    fun `should make pipeline with non DSL api`() {
+        // when
+        shell {
+            val echo = systemProcess {
+                cmd {
+                    "echo" withArg "abc\ndef"
+                }
+            }
+            val grep = systemProcess {
+                cmd {
+                    "grep" withArg "c"
+                }
+            }
+
+            from(echo)
+                .toProcess(grep)
+                .toProcess(systemProcess { cmd = "cat" })
+                .toLambda(storeResult)
+                .await()
+        }
+
+        // then
+        assertEquals("abc\n", readResult())
     }
 }
