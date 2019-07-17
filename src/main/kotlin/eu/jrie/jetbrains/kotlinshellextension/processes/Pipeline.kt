@@ -4,6 +4,8 @@ import eu.jrie.jetbrains.kotlinshellextension.ShellPiping
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -34,9 +36,7 @@ class Pipeline private constructor (
     fun toProcess(process: ProcessBuilder) = apply {
         processLine.add(
             commander.process(
-                process
-                    .followIn(processLine.last().stdout)
-                    .followStdOut()
+                process.followIn(processLine.last().stdoutChannel)
             ).apply { start() }
         )
     }
@@ -49,7 +49,7 @@ class Pipeline private constructor (
      */
     @ExperimentalCoroutinesApi
     fun toLambda(lambda: (Byte) -> Unit) = apply {
-        processLine.last().stdout.subscribe(lambda)
+       commander.scope.launch { processLine.last().stdoutChannel.consumeEach(lambda) }
     }
 
     /**
@@ -71,9 +71,10 @@ class Pipeline private constructor (
      */
     @ExperimentalCoroutinesApi
     fun appendFile(file: File) = apply {
-        processLine.last().stdout.subscribe {
-            file.appendBytes(ByteArray(1) { _ -> it })
-        }
+        TODO()
+        //        processLine.last().stdout.subscribe {
+//            file.appendBytes(ByteArray(1) { _ -> it })
+//        }
     }
 
     /**
@@ -93,8 +94,6 @@ class Pipeline private constructor (
          * @see ShellPiping
          */
         internal fun from(start: ProcessBuilder, commander: ProcessCommander): Pipeline {
-            start.followStdOut()
-
             val process = commander.process(start).apply { start() }
             val pipeline = Pipeline(commander)
             pipeline.processLine.add(process)

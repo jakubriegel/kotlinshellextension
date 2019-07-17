@@ -12,8 +12,6 @@ class SystemProcessBuilder (
         command,
         arguments,
         input,
-        stdout,
-        stderr,
         environment,
         directory,
         scope

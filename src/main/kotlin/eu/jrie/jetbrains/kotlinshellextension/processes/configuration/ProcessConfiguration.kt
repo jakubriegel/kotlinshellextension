@@ -1,8 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.configuration
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
 abstract class ProcessConfiguration {
@@ -84,77 +82,77 @@ abstract class InOutConfiguration {
 }
 
 class InputConfiguration : InOutConfiguration() {
-    fun follow() = config { followIn() }
-
-    fun from(stream: ProcessStream) = config { followIn(stream) }
-
-    fun from(file: File) = config { followFile(file) }
-
-    fun set(input: String) = config {
-        followIn(ProcessStream().apply {
-            invokeOnReady {
-                write(input)
-                close()
-            }
-        })
-    }
-
-    fun set(input: ByteArray) = config {
-        followIn(ProcessStream().apply {
-            invokeOnReady {
-                write(input)
-                close()
-            }
-        })
-    }
-
-    fun set(input: Byte) = config {
-        followIn(ProcessStream().apply {
-            invokeOnReady {
-                writeBlocking(input)
-                close()
-            }
-        })
-    }
+//    fun follow() = config { followIn() }
+//
+//    fun from(stream: ProcessStream) = config { followIn(stream) }
+//
+//    fun from(file: File) = config { followFile(file) }
+//
+//    fun set(input: String) = config {
+//        followIn(ProcessStream().apply {
+//            invokeOnReady {
+//                write(input)
+//                close()
+//            }
+//        })
+//    }
+//
+//    fun set(input: ByteArray) = config {
+//        followIn(ProcessStream().apply {
+//            invokeOnReady {
+//                write(input)
+//                close()
+//            }
+//        })
+//    }
+//
+//    fun set(input: Byte) = config {
+//        followIn(ProcessStream().apply {
+//            invokeOnReady {
+//                writeBlocking(input)
+//                close()
+//            }
+//        })
+//    }
 }
 
 class OutputConfiguration : InOutConfiguration() {
-    fun follow() = config { followOut() }
-
-    fun followTo(std: ProcessStream, err: ProcessStream) = config { followOut(std, err) }
-
-    @ExperimentalCoroutinesApi
-    fun followTo(stdFile: File, errFile: File) = config { followOut(stdFile, errFile) }
-
-    fun followMerged() = config { followMergedOut() }
-
-    fun followMergedTo(out: ProcessStream) = config { followMergedOut(out) }
-
-    @ExperimentalCoroutinesApi
-    fun followMergedTo(file: File) = config { followMergedOut(file) }
-
-    fun followStd(): ProcessStream {
-        val stream = ProcessStream()
-        config { followStdOut(stream) }
-        return stream
-    }
-
-    fun followStdTo(std: ProcessStream) = config { followStdOut(std) }
-
-    @ExperimentalCoroutinesApi
-    fun followStdTo(file: File) = config { followStdOut(file) }
-
-    fun followErr(): ProcessStream {
-        val stream = ProcessStream()
-        config { followStdErr(stream) }
-        return stream
-    }
-
-    fun followErrTo(err: ProcessStream) = config { followStdErr(err) }
-
-    @ExperimentalCoroutinesApi
-    fun followErrTo(file: File) = config { followStdErr(file) }
-
-    @ExperimentalCoroutinesApi
-    infix fun ProcessStream.andDo(subscribe: (Byte) -> Unit) = invokeOnReady { subscribe(subscribe) }
+//    fun follow() = config { followOut() }
+//
+//    fun followTo(std: ProcessStream, err: ProcessStream) = config { followOut(std, err) }
+//
+//    @ExperimentalCoroutinesApi
+//    fun followTo(stdFile: File, errFile: File) = config { followOut(stdFile, errFile) }
+//
+//    fun followMerged() = config { followMergedOut() }
+//
+//    fun followMergedTo(out: ProcessStream) = config { followMergedOut(out) }
+//
+//    @ExperimentalCoroutinesApi
+//    fun followMergedTo(file: File) = config { followMergedOut(file) }
+//
+//    fun followStd(): ProcessStream {
+//        val stream = ProcessStream()
+//        config { followStdOut(stream) }
+//        return stream
+//    }
+//
+//    fun followStdTo(std: ProcessStream) = config { followStdOut(std) }
+//
+//    @ExperimentalCoroutinesApi
+//    fun followStdTo(file: File) = config { followStdOut(file) }
+//
+//    fun followErr(): ProcessStream {
+//        val stream = ProcessStream()
+//        config { followStdErr(stream) }
+//        return stream
+//    }
+//
+//    fun followErrTo(err: ProcessStream) = config { followStdErr(err) }
+//
+//    @ExperimentalCoroutinesApi
+//    fun followErrTo(file: File) = config { followStdErr(file) }
+//
+//    @ExperimentalCoroutinesApi
+//    infix fun ProcessStream.andDo(subscribe: (Byte) -> Unit) = invokeOnReady { subscribe(subscribe) }
 }

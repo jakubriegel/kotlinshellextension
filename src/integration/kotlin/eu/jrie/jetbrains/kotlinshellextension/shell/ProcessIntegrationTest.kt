@@ -12,15 +12,13 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
     fun `should execute "echo hello world"`() {
         // when
         shell {
-            launchSystemProcess {
+            val echo = launchSystemProcess {
                 cmd {
                     "echo" withArgs listOf("hello", "world")
                 }
-                output {
-                    followStd() andDo storeResult
-                }
-                dir(directory)
             }
+
+            consumeResult(echo)
         }
 
         // then
@@ -40,15 +38,14 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
         // when
         shell {
-            launchSystemProcess {
+            val ls = launchSystemProcess {
                 cmd {
                     "ls" withArg "-l"
                 }
-                output {
-                    followStd() andDo storeResult
-                }
                 dir(directory)
             }
+
+            consumeResult(ls)
         }
 
         // then
@@ -80,11 +77,11 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
             val script = launchSystemProcess {
                 cmd = "./$scriptName"
-                output {
-                    followStd() andDo storeResult
-                }
                 dir(directory)
             }
+
+            // TODO: fix awaiting without reading channel [probably buffer size]
+            consumeResult(script)
             commander.awaitProcess(script)
         }
     }

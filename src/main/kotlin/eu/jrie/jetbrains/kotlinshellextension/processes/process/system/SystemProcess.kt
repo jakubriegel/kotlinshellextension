@@ -2,17 +2,19 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.PCB
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.apache.commons.io.output.NullOutputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
+import org.zeroturnaround.exec.listener.ProcessListener
 import org.zeroturnaround.exec.stream.LogOutputStream
 import java.io.File
 import java.io.InputStream
@@ -23,25 +25,21 @@ class SystemProcess @TestOnly internal constructor (
     vPID: Int,
     val command: String,
     val arguments: List<String>,
-    input: ProcessStream,
-    stdout: ProcessStream,
-    stderr: ProcessStream,
+    input: ReceiveChannel<Byte>?,
     environment: Map<String, String>,
     directory: File,
     scope: CoroutineScope,
     private val executor: ProcessExecutor
-) : Process(vPID, input, stdout, stderr, environment, directory, scope) {
+) : Process(vPID, input, environment, directory, scope) {
 
     constructor(vPID: Int,
                 command: String,
                 arguments: List<String>,
-                input: ProcessStream,
-                stdout: ProcessStream,
-                stderr: ProcessStream,
+                input: ReceiveChannel<Byte>?,
                 environment: Map<String, String>,
                 directory: File,
                 scope: CoroutineScope
-    ) : this(vPID, command, arguments, input, stdout, stderr, environment, directory, scope, ProcessExecutor())
+    ) : this(vPID, command, arguments, input, environment, directory, scope, ProcessExecutor())
 
     override val pcb = SystemPCB()
 
@@ -59,7 +57,7 @@ class SystemProcess @TestOnly internal constructor (
             .command(listOf(command).plus(arguments))
             .destroyOnExit()
             .addListener(SystemProcessListener(this))
-            .redirectInput(SystemProcessInputStream(input))
+            .redirectInput()
             .redirectOutput()
             .environment(environment)
             .directory(directory)
@@ -95,26 +93,45 @@ class SystemProcess @TestOnly internal constructor (
         }
     }
 
+    override fun toString() = name
+
     internal class SystemProcessLogOutputStream (
-        private val sink: ProcessInputStream
+        private val sink: SendChannel<Byte>
     ) : LogOutputStream() {
         override fun processLine(line: String?) {
-            if (line != null) sink.writeAsLine(line)
+            line?.plus('\n')?.forEach { sink.sendBlocking(it.toByte()) }
         }
     }
 
     internal class SystemProcessInputStream (
-        private val tap: ProcessOutputStream
+        private val tap: ReceiveChannel<Byte>,
+        private val scope: CoroutineScope
     ) : InputStream() {
         override fun read(): Int {
             return try {
-                tap.read().toInt()
+                runBlocking(scope.coroutineContext) { tap.receive().toInt() }
             }
             catch (e: ClosedReceiveChannelException) {
                 close()
                 -1
             }
         }
+    }
+
+    class SystemProcessListener (
+        private val process: SystemProcess
+    ) : ProcessListener() {
+        override fun afterStop(process: java.lang.Process?) = finalizeProcess()
+
+        private fun finalizeProcess() {
+            process.stdout.close()
+            process.stderr.close()
+            logger.debug("finalized $process}")
+        }
+    }
+
+    private fun ProcessExecutor.redirectInput() = apply {
+        if (input != null) redirectInput(SystemProcessInputStream(input, scope))
     }
 
     private fun ProcessExecutor.redirectOutput() = apply {

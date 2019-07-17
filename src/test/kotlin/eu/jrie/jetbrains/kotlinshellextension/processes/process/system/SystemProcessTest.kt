@@ -1,6 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
@@ -13,6 +12,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -28,9 +28,7 @@ import java.util.concurrent.TimeUnit
 
 class SystemProcessTest {
     private val executorMock = spyk<ProcessExecutor>()
-    private val input = ProcessStream()
-    private val stdout = ProcessStream()
-    private val stderr = ProcessStream()
+    private val input = Channel<Byte>()
     private val directory = File("")
 
     private val process = SystemProcess(
@@ -38,8 +36,6 @@ class SystemProcessTest {
         PROCESS_COMMAND,
         PROCESS_ARGS,
         input,
-        stdout,
-        stderr,
         ENVIRONMENT,
         directory,
         spyk(),
@@ -51,7 +47,7 @@ class SystemProcessTest {
         verify (exactly = 1) {
             executorMock.command(listOf(PROCESS_COMMAND).plus(PROCESS_ARGS))
             executorMock.destroyOnExit()
-            executorMock.addListener(ofType(SystemProcessListener::class))
+            executorMock.addListener(ofType(SystemProcess.SystemProcessListener::class))
             executorMock.redirectInput(ofType(SystemProcess.SystemProcessInputStream::class))
             executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class))
             executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class))
@@ -273,8 +269,6 @@ class SystemProcessTest {
             PROCESS_COMMAND,
             PROCESS_ARGS,
             input,
-            stdout,
-            stderr,
             ENVIRONMENT,
             directory,
             scope,

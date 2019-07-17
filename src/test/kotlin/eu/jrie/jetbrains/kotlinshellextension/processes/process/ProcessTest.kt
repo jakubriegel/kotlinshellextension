@@ -1,11 +1,8 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.VIRTUAL_PID
 import io.mockk.every
-import io.mockk.just
-import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
@@ -19,15 +16,6 @@ import java.io.File
 class ProcessTest {
 
     private val process = spyk<SampleProcess>()
-
-    companion object {
-        val stdMock = spyk<ProcessStream> {
-            every { close() } just runs
-        }
-        val errMock = spyk<ProcessStream> {
-            every { close() } just runs
-        }
-    }
 
     @Test
     fun `should start process`() {
@@ -105,17 +93,14 @@ class ProcessTest {
     fun `should close stdout and stderr`() {
         // when
         process.closeOut()
+        TODO("implement channels")
 
         // then
-        verify (exactly = 1) { stdMock.close() }
-        verify (exactly = 1) { errMock.close() }
     }
 
     private open class SampleProcess : Process(
         VIRTUAL_PID,
-        spyk(),
-        stdMock,
-        errMock,
+        null,
         ENVIRONMENT,
         File(""),
         spyk()
