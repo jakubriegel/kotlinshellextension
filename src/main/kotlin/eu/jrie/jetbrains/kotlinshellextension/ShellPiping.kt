@@ -95,7 +95,20 @@ abstract class ShellPiping (
      */
     @ExperimentalCoroutinesApi
     infix fun Pipeline.append(file: File) = appendFile(file)
+
+    /**
+     * Awaits this [Pipeline]
+     * Shall be wrapped with piping DSL
+     *
+     * @see Pipeline.await
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    suspend infix fun Pipeline.await(all: All) = await()
 }
+
+object All
+typealias all = All
 
 /**
  * Alias for piping output to print().

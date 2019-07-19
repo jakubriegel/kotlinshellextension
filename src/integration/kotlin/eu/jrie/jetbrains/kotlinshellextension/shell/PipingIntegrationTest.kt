@@ -1,5 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
+import eu.jrie.jetbrains.kotlinshellextension.all
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.shell
 import eu.jrie.jetbrains.kotlinshellextension.stdout
@@ -152,7 +153,7 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     fun `should await pipeline`() {
         // given
         val file = file(content = LOREM_IPSUM)
-        val states = mutableListOf<String>()
+        val statesAfterAwait = mutableListOf<String>()
 
         // when
         shell {
@@ -168,13 +169,12 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
                 }
             }
 
-            val pipeline = file pipe grep pipe wc pipe storeResult
-            pipeline.await()
-            pipeline.processes.forEach { states.add(it.pcb.state.name) }
+            val pipeline = file pipe grep pipe wc pipe storeResult await all
+            pipeline.processes.forEach { statesAfterAwait.add(it.pcb.state.name) }
         }
 
         // then
-        states.forEach { assertEquals(ProcessState.TERMINATED.name, it) }
+        statesAfterAwait.forEach { assertEquals(ProcessState.TERMINATED.name, it) }
     }
 
     @Test
