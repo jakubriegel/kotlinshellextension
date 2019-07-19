@@ -2,6 +2,7 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
@@ -34,6 +35,7 @@ protected constructor (
     protected val stdin: ProcessReceiveChannel?
     protected val stdout: ProcessSendChannel
     protected val stderr: ProcessSendChannel?
+    private val ioJobs = mutableListOf<Job>()
 
     abstract val pcb: PCB
 
@@ -56,7 +58,7 @@ protected constructor (
 
     private fun initIn(): ProcessReceiveChannel? {
         return if (stdinBuffer != null) {
-            channel().also { scope.launch { stdinBuffer.receiveTo(it) } }
+            channel().also { launchIO { stdinBuffer.receiveTo(it) } }
         } else null
     }
 
@@ -65,20 +67,20 @@ protected constructor (
         var err: ProcessChannel? = channel()
         when {
             stdoutBuffer == null && stderrBuffer == null -> {
-                scope.launch { consumeAndPrint(std) }
+                launchIO { consumeAndPrint(std) }
                 err = null
             }
             stdoutBuffer != null && stderrBuffer == null -> {
-                scope.launch { stdoutBuffer.consumeFrom(std) }
+                launchIO { stdoutBuffer.consumeFrom(std) }
                 scope.launch { consumeAndPrint(err!!) }
             }
             stdoutBuffer == null && stderrBuffer != null -> {
-                scope.launch { consumeAndPrint(std) }
-                scope.launch { stderrBuffer.consumeFrom(err!!) }
+                launchIO { consumeAndPrint(std) }
+                launchIO { stderrBuffer.consumeFrom(err!!) }
             }
             stdoutBuffer != null && stderrBuffer != null -> {
-                scope.launch { stdoutBuffer.consumeFrom(std) }
-                scope.launch { stderrBuffer.consumeFrom(err!!) }
+                launchIO { stdoutBuffer.consumeFrom(std) }
+                launchIO { stderrBuffer.consumeFrom(err!!) }
             }
         }
         return std to err
@@ -107,6 +109,7 @@ protected constructor (
     internal suspend fun await(timeout: Long = 0) {
         if (isAlive()) {
             expect(timeout)
+            ioJobs.forEach { it.join() }
             pcb.endTime = Instant.now()
             pcb.state = ProcessState.TERMINATED
         }
@@ -127,6 +130,10 @@ protected constructor (
     }
 
     protected abstract fun destroy()
+
+    private fun launchIO(ioBlock: suspend CoroutineScope.() -> Unit) {
+        ioJobs.add(scope.launch(block = ioBlock))
+    }
 
     companion object {
 

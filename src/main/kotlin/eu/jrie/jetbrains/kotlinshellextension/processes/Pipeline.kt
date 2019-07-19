@@ -8,6 +8,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
@@ -34,6 +35,8 @@ class Pipeline private constructor (
 
     private lateinit var lastBuffer: ProcessIOBuffer
 
+    private val asyncJobs = mutableListOf<Job>()
+
     /**
      * Read only list of [Process]es added to this [Pipeline].
      * Most recent [Process] is at the end of the list
@@ -53,7 +56,7 @@ class Pipeline private constructor (
                 process
                     .withStdinBuffer(lastBuffer)
                     .withStdoutBuffer(buffer())
-            ).apply { start() }
+            ).also { commander.startProcess(it) }
         )
     }
 
@@ -65,8 +68,8 @@ class Pipeline private constructor (
      */
     fun toLambda(lambda: PipelineLambda) = apply {
         val lambdaChannel: ProcessChannel = Channel(128) // TODO: size
-        commander.scope.launch { lastBuffer.receiveTo(lambdaChannel) }
-        commander.scope.launch { lambdaChannel.consumeEach(lambda) }
+        launch { lastBuffer.receiveTo(lambdaChannel) }
+        launch { lambdaChannel.consumeEach(lambda) }
     }
 
     /**
@@ -87,7 +90,7 @@ class Pipeline private constructor (
      */
     fun appendFile(file: File) = apply {
         val fileWriteChannel: ProcessChannel = Channel(FILE_RW_CHANNEL_BUFFER_SIZE)
-        commander.scope.launchIO {
+        launchIO {
             file.outputStream().use {
                 fileWriteChannel.consumeEach { p ->
                     it.writePacket(p)
@@ -96,7 +99,7 @@ class Pipeline private constructor (
                 it.close()
             }
         }
-        commander.scope.launch { lastBuffer.receiveTo(fileWriteChannel) }
+        launch { lastBuffer.receiveTo(fileWriteChannel) }
 
     }
 
@@ -108,9 +111,18 @@ class Pipeline private constructor (
      */
     suspend fun await() = apply {
         processLine.forEach { commander.awaitProcess(it) }
+        asyncJobs.forEach { it.join() }
     }
 
     private fun buffer() = ProcessIOBuffer().also { lastBuffer = it }
+
+    private fun launchIO(ioBlock: suspend CoroutineScope.() -> Unit) = launch {
+        withContext(Dispatchers.IO, ioBlock)
+    }
+
+    private fun launch(block: suspend CoroutineScope.() -> Unit) {
+        asyncJobs.add(commander.scope.launch(block = block))
+    }
 
     companion object {
         /**
@@ -121,7 +133,7 @@ class Pipeline private constructor (
         internal fun from(start: ProcessBuilder, commander: ProcessCommander): Pipeline {
             val pipeline = Pipeline(commander)
             start.withStdoutBuffer(pipeline.buffer())
-            val process = commander.process(start).apply { start() }
+            val process = commander.process(start).also { commander.startProcess(it) }
             pipeline.processLine.add(process)
             return pipeline
         }
@@ -139,9 +151,12 @@ class Pipeline private constructor (
          * @see ShellPiping
          */
         internal fun fromFile(file: File, process: ProcessBuilder, commander: ProcessCommander): Pipeline {
+            val pipeline = Pipeline(commander)
+
             val buffer = ProcessIOBuffer()
+            pipeline.lastBuffer = buffer
             val fileReadChannel: ProcessChannel = Channel(FILE_RW_CHANNEL_BUFFER_SIZE)
-            commander.scope.launchIO {
+            pipeline.launchIO {
                 file.inputStream().use {
                     while (it.available() > 0) {
                         val packet = it.readPacketAtMost(FILE_RW_PACKET_SIZE)
@@ -150,20 +165,24 @@ class Pipeline private constructor (
                     fileReadChannel.close()
                 }
             }
-            commander.scope.launch { buffer.consumeFrom(fileReadChannel) }
+            pipeline.launch { buffer.consumeFrom(fileReadChannel) }
 
-            return from(process.withStdinBuffer(buffer), commander)
+            return pipeline.toProcess(process)
+        }
+
+        /**
+         * Starts new [Pipeline] with given [buffer] as start
+         *
+         * @see ShellPiping
+         */
+        internal fun fromBuffer(buffer: ProcessIOBuffer, commander: ProcessCommander): Pipeline {
+            val pipeline = Pipeline(commander)
+            pipeline.lastBuffer = buffer
+            return pipeline
         }
 
         private const val FILE_RW_PACKET_SIZE: Long = 256
         private const val FILE_RW_CHANNEL_BUFFER_SIZE = 16
-
-        private fun CoroutineScope.launchIO(ioBlock: suspend () -> Unit) = launch {
-            withContext(Dispatchers.IO) {
-                ioBlock()
-            }
-        }
-
     }
 
 }

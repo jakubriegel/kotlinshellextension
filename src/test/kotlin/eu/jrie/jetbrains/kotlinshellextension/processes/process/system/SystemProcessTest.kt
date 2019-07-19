@@ -114,7 +114,7 @@ class SystemProcessTest {
 
     @Test
     @ObsoleteCoroutinesApi
-    fun `should blocking await process`() {
+    fun `should suspend await process`() {
         // given
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk {
@@ -129,6 +129,7 @@ class SystemProcessTest {
                 every { future } returns futureMock
             }
 
+            process.closeOut()
             process.await()
         }
 
@@ -155,6 +156,7 @@ class SystemProcessTest {
                 every { future } returns futureMock
             }
 
+            process.closeOut()
             process.await(timeout)
         }
 

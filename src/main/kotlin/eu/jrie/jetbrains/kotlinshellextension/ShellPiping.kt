@@ -4,16 +4,71 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.Pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.PipelineLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.io.core.ByteReadPacket
 import java.io.File
+
+typealias PipelineFork = (ProcessIOBuffer) -> Unit
+
+typealias PipelineForkPair = Pair<ProcessBuilder, PipelineFork>
 
 @ExperimentalCoroutinesApi
 abstract class ShellPiping (
     private val commander: ProcessCommander
 ) {
+    /**
+     * ****************** | ****************** | ******************
+     */
+
+    infix fun (() -> ByteReadPacket).pipe(process: ProcessBuilder) {}
+
+    infix fun ProcessBuilder.pipe(fork: PipelineForkPair) = fork.first
+        .let { process ->
+            forkErr(process, fork.second)
+            from(this) pipe process
+        }
+
+
+    infix fun PipelineForkPair.pipe(process: ProcessBuilder): Pipeline {
+        forkErr(first, second)
+        return from(first) pipe process
+    }
+
+    infix fun PipelineForkPair.pipe(lambda: PipelineLambda): Pipeline {
+        forkErr(first, second)
+        return from(first) pipe lambda
+    }
+
+    infix fun PipelineForkPair.pipe(file: File): Pipeline {
+        forkErr(first, second)
+        return from(first) pipe file
+    }
+
+    private fun forkErr(process: ProcessBuilder, fork: PipelineFork) {
+        ProcessIOBuffer().let {
+            process.withStderrBuffer(it)
+            fork.invoke(it)
+        }
+    }
+
+    infix fun ProcessIOBuffer.pipe(lambda: PipelineLambda) = from(this) pipe lambda
+
+    infix fun ProcessIOBuffer.pipe(process: ProcessBuilder) = from(this) pipe process
+
+    private fun from(buffer: ProcessIOBuffer) = Pipeline.fromBuffer(buffer, commander)
+
+    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this to fork
+
+
+    fun forkErr(fork: PipelineFork) = fork
 
     /**
-     * Starts new [Pipeline] from process specified by given [ProcessBuilder].
+     * ****************** | ****************** | ******************
+     */
+
+    /**
+     * Starts new [Pipeline] fromBuffer process specified by given [ProcessBuilder].
      * Shall be wrapped with piping DSL
      *
      * @see ProcessBuilder.pipe
@@ -23,7 +78,7 @@ abstract class ShellPiping (
     fun from(process: ProcessBuilder) = Pipeline.from(process, commander)
 
     /**
-     * Starts new [Pipeline] from this process process one specified by [process].
+     * Starts new [Pipeline] fromBuffer this process process one specified by [process].
      * Part of piping DSL
      *
      * @see ProcessBuilder.pipe
@@ -33,14 +88,14 @@ abstract class ShellPiping (
     infix fun ProcessBuilder.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
-     * Starts new [Pipeline] from this process tp [tap] function.
+     * Starts new [Pipeline] fromBuffer this process tp [lambda] function.
      * Part of piping DSL
      *
      * @see ProcessBuilder.pipe
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessBuilder.pipe(tap: PipelineLambda) = from(this) pipe tap
+    infix fun ProcessBuilder.pipe(lambda: PipelineLambda) = from(this) pipe lambda
 
     /**
      * Starts new pipeline with [file] as an input of given [process].
@@ -70,13 +125,13 @@ abstract class ShellPiping (
     infix fun Pipeline.pipe(process: ProcessBuilder) = toProcess(process)
 
     /**
-     * Ends this [Pipeline] with [tap] function
+     * Ends this [Pipeline] with [lambda] function
      * Shall be wrapped with piping DSL
      *
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi // TODO: implement KtsProcess
-    infix fun Pipeline.pipe(tap: PipelineLambda) = toLambda(tap)
+    infix fun Pipeline.pipe(lambda: PipelineLambda) = toLambda(lambda)
 
     /**
      * Ends this [Pipeline] by writing its output to [file].

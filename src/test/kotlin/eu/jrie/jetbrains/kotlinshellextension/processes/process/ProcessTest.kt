@@ -50,6 +50,8 @@ class ProcessTest {
         // when
         runTest {
             every { process.isAlive() } returns true
+
+            process.closeOut()
             process.await(timeout)
         }
 

@@ -116,11 +116,11 @@ abstract class ProcessBuilder  {
     /**
      * Sets execution directory
      *
-     * @param dir directory to execute the [Process] from
+     * @param dir directory to execute the [Process] fromBuffer
      * @return this builder
      */
     fun withDir(dir: File) = apply {
-        if (!dir.isDirectory) throw Exception("Process must be executed from directory")
+        if (!dir.isDirectory) throw Exception("Process must be executed fromBuffer directory")
         directory = dir
     }
 
@@ -132,7 +132,7 @@ abstract class ProcessBuilder  {
     internal fun withScope(scope: CoroutineScope) = apply { this.scope = scope }
 
     /**
-     * Builds a [Process] from this builder
+     * Builds a [Process] fromBuffer this builder
      *
      * @return new running [Process]
      */
