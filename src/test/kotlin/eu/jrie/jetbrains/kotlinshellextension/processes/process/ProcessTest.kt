@@ -4,7 +4,8 @@ import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONM
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.VIRTUAL_PID
 import io.mockk.every
 import io.mockk.spyk
-import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,14 +14,15 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.io.File
 
+@ExperimentalCoroutinesApi
 class ProcessTest {
 
-    private val process = spyk<SampleProcess>()
+    private lateinit var process: Process// = spyk<SampleProcess>()
 
     @Test
     fun `should start process`() {
         // when
-        process.start()
+        runTest { process.start() }
 
         // then
         assertEquals(process.pcb.state, ProcessState.RUNNING)
@@ -29,81 +31,59 @@ class ProcessTest {
     @ParameterizedTest(name = "{index} {0} should throw exception when tried to start not READY process")
     @EnumSource(ProcessState::class)
     fun `should throw exception when tried to start not READY process`(state: ProcessState) {
-        // given
-        process.pcb.state = state
+        runTest {
+            // given
+            process.pcb.state = state
 
-        // when
-        if (state != ProcessState.READY) {
-            // then
-            assertThrows<Exception> { process.start() }
+            // when
+            if (state != ProcessState.READY) {
+                // then
+                assertThrows<Exception> { process.start() }
+            }
         }
-    }
-
-    @Test
-    fun `should perform given action when process is alive`() {
-        // given
-        val action = { process.kill() }
-
-        every { process.isAlive() } returns true
-
-        // when
-        process.ifAlive(action)
-
-        // then
-        verify (exactly = 1) {
-            process.ifAlive(any())
-            process.isAlive()
-        }
-        verify (exactly = 1) { process.kill() }
-
-    }
-
-    @Test
-    fun `should not perform given action when process is not alive`() {
-        // given
-        val action = { process.kill() }
-
-        every { process.isAlive() } returns false
-
-        // when
-        process.ifAlive(action)
-
-        // then
-        verify (exactly = 1) {
-            process.ifAlive(any())
-            process.isAlive()
-        }
-        verify (exactly = 0) { process.kill() }
-
     }
 
     @Test
     fun `should await process`() = runBlocking {
         val timeout: Long = 500
-        every { process.isAlive() } returns true
 
         // when
-        process.await(timeout)
+        runTest {
+            every { process.isAlive() } returns true
+            process.await(timeout)
+        }
 
         // then
         assertEquals(ProcessState.TERMINATED, process.pcb.state)
     }
 
     @Test
-    fun `should close stdout and stderr`() {
+    fun `should kill process`() = runBlocking {
         // when
-        process.closeOut()
-        TODO("implement channels")
+        runTest {
+            process.kill()
+        }
 
         // then
+        assertEquals(ProcessState.TERMINATED, process.pcb.state)
     }
 
-    private open class SampleProcess : Process(
+    private fun runTest(test: suspend ProcessTest.() -> Unit) = runBlocking {
+        process = spyk(SampleProcess(this))
+        test()
+        process.closeOut()
+    }
+
+    private open class SampleProcess (
+        scope: CoroutineScope
+    ) : Process(
         VIRTUAL_PID,
-        null,
         ENVIRONMENT,
         File(""),
-        spyk()
+        null,
+        null,
+        null,
+        scope
     ) {
         override val pcb: PCB = spyk()
         override val statusCmd = ""

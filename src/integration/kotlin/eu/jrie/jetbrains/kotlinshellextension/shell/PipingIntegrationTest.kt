@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.io.File
 
+@ExperimentalCoroutinesApi
 class PipingIntegrationTest : ProcessBaseIntegrationTest() {
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should pipe to function`() {
         // given
         val content = "abc"
@@ -32,7 +32,30 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
+    fun `should pipe multiple processes to function`() {
+        // given
+        val content = "abc"
+
+        // when
+        shell {
+            val echo = systemProcess {
+                cmd {
+                    "echo" withArg content
+                }
+            }
+
+            val cat = systemProcess {
+                cmd = "cat"
+            }
+
+            echo pipe cat pipe storeResult
+        }
+
+        // then
+        assertEquals("$content\n", readResult())
+    }
+
+    @Test
     fun `should pipe file to "cat"`() {
         // given
         val file = file(content = LOREM_IPSUM)
@@ -49,7 +72,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should pipe file to "grep "Llorem""`() {
         // given
         val file = file(content = LOREM_IPSUM)
@@ -72,7 +94,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should pipe "file to grep "Llorem" | wc --chars"`() {
         // given
         val file = file(content = LOREM_IPSUM)
@@ -100,7 +121,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should pipe "file to grep "Llorem" | wc --chars to file"`() {
         // given
         val file = file(content = LOREM_IPSUM)
@@ -129,7 +149,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should await pipeline`() {
         // given
         val file = file(content = LOREM_IPSUM)
@@ -159,7 +178,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should pipe to console`() {
         // when
         shell {
@@ -174,7 +192,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should make pipeline with non DSL api`() {
         // when
         shell {

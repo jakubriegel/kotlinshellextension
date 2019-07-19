@@ -1,21 +1,30 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
 abstract class ProcessBuilder  {
 
     protected var vPID: Int = -1
 
-    var input: ReceiveChannel<Byte>? = null
-        protected set
-
     var directory = currentDir()
         protected set
 
     protected val environment = mutableMapOf<String, String>()
     fun environment() = environment.toMap()
+
+    @ExperimentalCoroutinesApi
+    var stdinBuffer: ProcessIOBuffer? = null
+        protected set
+
+    @ExperimentalCoroutinesApi
+    var stdoutBuffer: ProcessIOBuffer? = null
+        protected set
+
+    @ExperimentalCoroutinesApi
+    var stderrBuffer: ProcessIOBuffer? = null
+        protected set
 
     protected lateinit var scope: CoroutineScope
 
@@ -27,18 +36,34 @@ abstract class ProcessBuilder  {
     internal fun withVirtualPID(vPID: Int) = apply { this.vPID = vPID }
 
     /**
-     * Will redirect the input of created process to the given [ProcessStream]
+     * Sets [buffer] as a source of [Process.stdin]
      *
      * @return this builder
      */
-    internal fun followIn(source: ReceiveChannel<Byte>) = apply { input = source }
+    @ExperimentalCoroutinesApi
+    internal fun withStdinBuffer(buffer: ProcessIOBuffer) = apply {
+        stdinBuffer = buffer
+    }
 
     /**
-     * Will set given [File] as input of created [Process]
+     * Sets [buffer] as a destination of [Process.stdout]
      *
      * @return this builder
      */
-    internal fun followFile(file: File): Nothing = TODO()// followIn(ProcessStream().fromFile(file))
+    @ExperimentalCoroutinesApi
+    internal fun withStdoutBuffer(buffer: ProcessIOBuffer) = apply {
+        stdoutBuffer = buffer
+    }
+
+    /**
+     * Sets [buffer] as a destination of [Process.stderr]
+     *
+     * @return this builder
+     */
+    @ExperimentalCoroutinesApi
+    internal fun withStderrBuffer(buffer: ProcessIOBuffer) = apply {
+        stderrBuffer = buffer
+    }
 
     /**
      * Adds new variable to the environment.
@@ -111,6 +136,7 @@ abstract class ProcessBuilder  {
      *
      * @return new running [Process]
      */
+    @ExperimentalCoroutinesApi
     internal abstract fun build(): Process
 
     companion object {

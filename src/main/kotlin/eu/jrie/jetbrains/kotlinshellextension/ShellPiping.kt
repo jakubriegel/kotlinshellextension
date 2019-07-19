@@ -1,11 +1,13 @@
 package eu.jrie.jetbrains.kotlinshellextension
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.Pipeline
+import eu.jrie.jetbrains.kotlinshellextension.processes.PipelineLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
+@ExperimentalCoroutinesApi
 abstract class ShellPiping (
     private val commander: ProcessCommander
 ) {
@@ -17,6 +19,7 @@ abstract class ShellPiping (
      * @see ProcessBuilder.pipe
      * @return this [Pipeline]
      */
+    @ExperimentalCoroutinesApi
     fun from(process: ProcessBuilder) = Pipeline.from(process, commander)
 
     /**
@@ -26,6 +29,7 @@ abstract class ShellPiping (
      * @see ProcessBuilder.pipe
      * @return this [Pipeline]
      */
+    @ExperimentalCoroutinesApi
     infix fun ProcessBuilder.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
@@ -36,7 +40,7 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessBuilder.pipe(tap: (Byte) -> Unit) = from(this) pipe tap
+    infix fun ProcessBuilder.pipe(tap: PipelineLambda) = from(this) pipe tap
 
     /**
      * Starts new pipeline with [file] as an input of given [process].
@@ -44,6 +48,7 @@ abstract class ShellPiping (
      *
      * @return this [Pipeline]
      */
+    @ExperimentalCoroutinesApi
     fun from(file: File, process: ProcessBuilder) = Pipeline.fromFile(file, process, commander)
 
     /**
@@ -52,6 +57,7 @@ abstract class ShellPiping (
      *
      * @return this [Pipeline]
      */
+    @ExperimentalCoroutinesApi
     infix fun File.pipe(process: ProcessBuilder) = from(this, process)
 
     /**
@@ -60,6 +66,7 @@ abstract class ShellPiping (
      *
      * @return this [Pipeline]
      */
+    @ExperimentalCoroutinesApi
     infix fun Pipeline.pipe(process: ProcessBuilder) = toProcess(process)
 
     /**
@@ -69,7 +76,7 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi // TODO: implement KtsProcess
-    infix fun Pipeline.pipe(tap: (Byte) -> Unit) = toLambda(tap)
+    infix fun Pipeline.pipe(tap: PipelineLambda) = toLambda(tap)
 
     /**
      * Ends this [Pipeline] by writing its output to [file].
@@ -97,4 +104,13 @@ abstract class ShellPiping (
  * @see ShellPiping
  * @see Pipeline
  */
-val stdout = { it: Byte -> print(it.toChar()) }
+val stdout: PipelineLambda = { print(it.readText()) }
+
+/**
+ * Alias for piping output to nowhere. Works line `> /dev/null`.
+ * To be use with [ShellPiping.pipe]
+ *
+ * @see ShellPiping
+ * @see Pipeline
+ */
+val nullout: PipelineLambda = {}

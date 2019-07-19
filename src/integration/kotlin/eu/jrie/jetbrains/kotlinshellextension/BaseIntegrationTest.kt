@@ -3,6 +3,7 @@ package eu.jrie.jetbrains.kotlinshellextension
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.AfterAll
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import java.io.File
 
+@ExperimentalCoroutinesApi
 abstract class BaseIntegrationTest {
 
     protected val vPID = 1

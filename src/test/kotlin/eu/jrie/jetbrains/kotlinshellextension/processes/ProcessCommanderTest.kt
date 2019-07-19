@@ -17,28 +17,33 @@ import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
+@ExperimentalCoroutinesApi
 class ProcessCommanderTest {
     private val scopeSpy = spyk<CoroutineScope>()
 
     private val commander = ProcessCommander(scopeSpy)
 
     @Test
-    fun `should create new SystemProcess`() {
+    fun `should create new SystemProcess`() = runBlocking {
         // given
+        val scope = this
+        val c = ProcessCommander(scope)
         val builder = spyk(SystemProcessBuilder(PROCESS_COMMAND))
 
         // when
-        val process = commander.process(builder)
+        val process = c.process(builder)
+        process.closeOut()
 
         // then
         verifyOrder {
             builder.withVirtualPID(ofType(Int::class))
-            builder.withScope(scopeSpy)
+            builder.withScope(scope)
             builder.build()
         }
 
@@ -46,14 +51,17 @@ class ProcessCommanderTest {
     }
 
     @Test
-    fun `should assign unique vPID to process`() {
+    fun `should assign unique vPID to process`() = runBlocking {
         // given
+        val c = ProcessCommander(this)
         val builder1 = spyk(SystemProcessBuilder(PROCESS_COMMAND))
         val builder2 = spyk(SystemProcessBuilder(PROCESS_COMMAND))
 
         // when
-        val process1 = commander.process(builder1)
-        val process2 = commander.process(builder2)
+        val process1 = c.process(builder1)
+        val process2 = c.process(builder2)
+        process1.closeOut()
+        process2.closeOut()
 
         // then
         verify (exactly = 1) {
@@ -319,5 +327,4 @@ class ProcessCommanderTest {
             processMock2.kill()
         }
     }
-
 }

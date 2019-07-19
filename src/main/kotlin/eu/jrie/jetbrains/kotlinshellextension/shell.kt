@@ -6,9 +6,11 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.KtsProcess
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.ProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 
+    @ExperimentalCoroutinesApi
 fun shell(script: suspend Shell.() -> Unit) {
     runBlocking {
         Shell(ProcessCommander(this)).script()
@@ -17,6 +19,7 @@ fun shell(script: suspend Shell.() -> Unit) {
     logger.debug("shell end")
 }
 
+@ExperimentalCoroutinesApi
 class Shell constructor (
     val commander: ProcessCommander
 ) : ShellPiping(commander) {

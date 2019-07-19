@@ -1,9 +1,13 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
+import kotlinx.io.core.ByteReadPacket
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -11,21 +15,25 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
 
-abstract class Process protected constructor (
+typealias ProcessChannel = Channel<ByteReadPacket>
+typealias ProcessReceiveChannel = ReceiveChannel<ByteReadPacket>
+typealias ProcessSendChannel = SendChannel<ByteReadPacket>
+
+@ExperimentalCoroutinesApi
+abstract class Process @ExperimentalCoroutinesApi
+protected constructor (
     val vPID: Int,
-    protected val input: ReceiveChannel<Byte>? = null,
     val environment: Map<String, String>,
     val directory: File,
+    private val stdinBuffer: ProcessIOBuffer? = null,
+    private val stdoutBuffer: ProcessIOBuffer? = null,
+    private val stderrBuffer: ProcessIOBuffer? = null,
     protected val scope: CoroutineScope
 ) {
 
-    protected val stdout = channel()
-    val stdoutChannel: ReceiveChannel<Byte>
-        get() = stdout
-
-    protected val stderr = channel()
-    val stderrChannel: ReceiveChannel<Byte>
-        get() = stderr
+    protected val stdin: ProcessReceiveChannel?
+    protected val stdout: ProcessSendChannel
+    protected val stderr: ProcessSendChannel?
 
     abstract val pcb: PCB
 
@@ -37,6 +45,48 @@ abstract class Process protected constructor (
 
     protected abstract val statusCmd: String
     protected abstract val statusOther: String
+
+    init {
+        stdin = initIn()
+
+        val out = initOut()
+        stdout = out.first
+        stderr = out.second
+    }
+
+    private fun initIn(): ProcessReceiveChannel? {
+        return if (stdinBuffer != null) {
+            channel().also { scope.launch { stdinBuffer.receiveTo(it) } }
+        } else null
+    }
+
+    private fun initOut(): Pair<ProcessSendChannel, ProcessSendChannel?> {
+        val std: ProcessChannel = channel()
+        var err: ProcessChannel? = channel()
+        when {
+            stdoutBuffer == null && stderrBuffer == null -> {
+                scope.launch { consumeAndPrint(std) }
+                err = null
+            }
+            stdoutBuffer != null && stderrBuffer == null -> {
+                scope.launch { stdoutBuffer.consumeFrom(std) }
+                scope.launch { consumeAndPrint(err!!) }
+            }
+            stdoutBuffer == null && stderrBuffer != null -> {
+                scope.launch { consumeAndPrint(std) }
+                scope.launch { stderrBuffer.consumeFrom(err!!) }
+            }
+            stdoutBuffer != null && stderrBuffer != null -> {
+                scope.launch { stdoutBuffer.consumeFrom(std) }
+                scope.launch { stderrBuffer.consumeFrom(err!!) }
+            }
+        }
+        return std to err
+    }
+
+    private suspend fun consumeAndPrint(channel: ProcessReceiveChannel) {
+        channel.consumeEach { print(it.readText()) }
+    }
 
     internal fun start(): PCB {
         return if (pcb.state != ProcessState.READY) {
@@ -54,11 +104,6 @@ abstract class Process protected constructor (
 
     abstract fun isAlive(): Boolean
 
-    @Deprecated("isAlive() should be checked directly due to suspend functions", ReplaceWith("if (isAlive()) action()"))
-    fun ifAlive(action: () -> Unit) {
-        if (isAlive()) action()
-    }
-
     internal suspend fun await(timeout: Long = 0) {
         if (isAlive()) {
             expect(timeout)
@@ -71,7 +116,7 @@ abstract class Process protected constructor (
 
     internal fun closeOut() {
         stdout.close()
-        stderr.close()
+        stderr?.close()
         logger.debug("closed out of $name")
     }
 
@@ -85,11 +130,9 @@ abstract class Process protected constructor (
 
     companion object {
 
-        const val DEFAULT_PROCESS_CHANNEL_SIZE = 512
+        private const val DEFAULT_PROCESS_CHANNEL_SIZE = 128
 
-        private fun channel() = Channel<Byte>(DEFAULT_PROCESS_CHANNEL_SIZE)
-        fun inChannel() = channel() as ReceiveChannel<Byte>
-        fun outChannel() = channel() as SendChannel<Byte>
+        internal fun channel(): ProcessChannel = Channel(DEFAULT_PROCESS_CHANNEL_SIZE)
 
         @JvmStatic
         internal val logger: Logger = LoggerFactory.getLogger(Process::class.java)

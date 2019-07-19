@@ -5,20 +5,18 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
+@ExperimentalCoroutinesApi
 class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should execute "echo hello world"`() {
         // when
         shell {
-            val echo = launchSystemProcess {
+            systemProcess {
                 cmd {
                     "echo" withArgs listOf("hello", "world")
                 }
-            }
-
-            consumeResult(echo)
+            } pipe storeResult
         }
 
         // then
@@ -26,7 +24,6 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should execute "ls -l"`() {
         // given
         file("file1")
@@ -38,14 +35,14 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
         // when
         shell {
-            val ls = launchSystemProcess {
+            systemProcess {
                 cmd {
                     "ls" withArg "-l"
                 }
                 dir(directory)
-            }
+            } pipe storeResult
 
-            consumeResult(ls)
+            commander.awaitAll()
         }
 
         // then
@@ -55,7 +52,6 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    @ExperimentalCoroutinesApi
     fun `should await process`() {
         // given
         val scriptCode = "for (( i = 0; i < 1000; ++i )); do\n" +
@@ -80,9 +76,42 @@ class ProcessIntegrationTest : ProcessBaseIntegrationTest() {
                 dir(directory)
             }
 
-            // TODO: fix awaiting without reading channel [probably buffer size]
-            consumeResult(script)
             commander.awaitProcess(script)
         }
+    }
+
+    @Test
+    fun `should consume result of long process`() {
+        TODO("fix when pipeErr done")
+        // given
+        val n = 100_000
+        val scriptCode = printScript(n)
+
+        val scriptName = "script"
+        file(scriptName, scriptCode)
+
+        // when
+        shell {
+            val chmod = launchSystemProcess {
+                cmd {
+                    "chmod" withArgs listOf("+x", scriptName)
+                }
+                dir(directory)
+            }
+            commander.awaitProcess(chmod)
+
+            systemProcess {
+                cmd = "./$scriptName"
+                dir(directory)
+            } pipe storeResult
+
+            commander.awaitAll()
+        }
+
+        // then
+        val expected = StringBuilder()
+            .also { repeat(n) { _ ->  it.append("$printScriptMessage\n") } }
+            .toString()
+        assertEquals(expected, readResult())
     }
 }

@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -28,24 +29,24 @@ dependencies {
 
 sourceSets {
     create("integration") {
-        compileClasspath += sourceSets.main.get().output
-        runtimeClasspath += sourceSets.main.get().output
+        withConvention(KotlinSourceSet::class) {
+            kotlin.srcDir("src/integration/kotlin")
+            resources.srcDir("src/integration/resources")
+            compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
+            runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath
+        }
     }
 }
 
-val integrationImplementation: Configuration by configurations.getting {
-    extendsFrom(configurations.implementation.get())
-    extendsFrom(configurations.testImplementation.get())
-}
-
-val integrationTest = task<Test>("integration") {
-    description = "Runs integration tests."
+task<Test>("integration") {
+    description = "Runs the integration tests"
     group = "verification"
-
     testClassesDirs = sourceSets["integration"].output.classesDirs
     classpath = sourceSets["integration"].runtimeClasspath
-    shouldRunAfter("test")
+    mustRunAfter(tasks["test"])
+    useJUnitPlatform()
 }
+
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "9"
@@ -54,4 +55,3 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
-

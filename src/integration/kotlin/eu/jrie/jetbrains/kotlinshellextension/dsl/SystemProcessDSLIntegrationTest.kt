@@ -4,11 +4,13 @@ import eu.jrie.jetbrains.kotlinshellextension.BaseIntegrationTest
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.shell
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.jetbrains.annotations.TestOnly
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertIterableEquals
 import org.junit.jupiter.api.Test
 
+@ExperimentalCoroutinesApi
 class SystemProcessDSLIntegrationTest : BaseIntegrationTest() {
     @Test
     fun `should create system process with given command`() {
