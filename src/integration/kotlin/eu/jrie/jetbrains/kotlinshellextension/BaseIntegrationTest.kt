@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jetbrains.annotations.TestOnly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -59,6 +60,11 @@ abstract class BaseIntegrationTest {
         commander = ProcessCommander(this)
         scope = commander.scope
         withContext(Dispatchers.Default) { test() }
+    }
+
+    @TestOnly // TODO: remove after reviewing changes in Shell
+    protected fun shell(script: suspend Shell.() -> Unit) = runBlocking {
+        shell(this, script)
     }
 
     companion object {

@@ -6,21 +6,31 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.KtsProcess
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.ProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
-    @ExperimentalCoroutinesApi
-fun shell(script: suspend Shell.() -> Unit) {
-    runBlocking {
-        Shell(ProcessCommander(this)).script()
-        logger.debug("script end")
+@ExperimentalCoroutinesApi
+suspend fun shell(script: suspend Shell.() -> Unit) {
+    coroutineScope {
+        shell(this, script)
     }
     logger.debug("shell end")
 }
 
 @ExperimentalCoroutinesApi
-class Shell constructor (
+suspend fun shell(scope: CoroutineScope, script: suspend Shell.() -> Unit) {
+    scope.launch {
+        val commander = ProcessCommander(this)
+        Shell(commander).script()
+        logger.debug("script end")
+    }
+}
+
+@ExperimentalCoroutinesApi
+open class Shell constructor (
     val commander: ProcessCommander
 ) : ShellPiping(commander) {
     fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration().apply(config).builder()
