@@ -15,30 +15,7 @@ abstract class ShellPiping (
     private val commander: ProcessCommander
 ) {
     /**
-     * ****************** | ****************** | ******************
-     */
-
-    private fun forkErr(process: ProcessBuilder, fork: PipelineFork) {
-        ProcessIOBuffer().let {
-            process.withStderrBuffer(it)
-            fork.invoke(it)
-        }
-    }
-
-    infix fun ProcessIOBuffer.pipe(lambda: PipelineLambda) = from(this) pipe lambda
-
-    infix fun ProcessIOBuffer.pipe(process: ProcessBuilder) = from(this) pipe process
-
-    private fun from(buffer: ProcessIOBuffer) = Pipeline.fromBuffer(buffer, commander)
-
-    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this.also { forkErr(this, fork) }
-
-    /**
-     * ****************** | ****************** | ******************
-     */
-
-    /**
-     * Starts new [Pipeline] fromBuffer process specified by given [ProcessBuilder].
+     * Starts new [Pipeline] from process specified by given [ProcessBuilder].
      * Shall be wrapped with piping DSL
      *
      * @see ProcessBuilder.pipe
@@ -48,7 +25,7 @@ abstract class ShellPiping (
     fun from(process: ProcessBuilder) = Pipeline.from(process, commander)
 
     /**
-     * Starts new [Pipeline] fromBuffer this process process one specified by [process].
+     * Starts new [Pipeline] from this process process one specified by [process].
      * Part of piping DSL
      *
      * @see ProcessBuilder.pipe
@@ -58,7 +35,7 @@ abstract class ShellPiping (
     infix fun ProcessBuilder.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
-     * Starts new [Pipeline] fromBuffer this process tp [lambda] function.
+     * Starts new [Pipeline] from this process to [lambda] function.
      * Part of piping DSL
      *
      * @see ProcessBuilder.pipe
@@ -86,6 +63,33 @@ abstract class ShellPiping (
     infix fun ProcessBuilder.append(file: File) = from(this) append file
 
     /**
+     * Starts new [Pipeline] from this [ProcessIOBuffer].
+     * Shall be wrapped with piping DSL
+     *
+     * @see ProcessBuilder.pipe
+     * @return this [Pipeline]
+     */
+    private fun from(buffer: ProcessIOBuffer) = Pipeline.fromBuffer(buffer, commander)
+
+    /**
+     * Starts new [Pipeline] from this [ProcessIOBuffer] to [lambda].
+     * Part of piping DSL
+     *
+     * @see ProcessBuilder.pipe
+     * @return this [Pipeline]
+     */
+    infix fun ProcessIOBuffer.pipe(lambda: PipelineLambda) = from(this) pipe lambda
+
+    /**
+     * Starts new [Pipeline] from this [ProcessIOBuffer] to [process].
+     * Part of piping DSL
+     *
+     * @see ProcessBuilder.pipe
+     * @return this [Pipeline]
+     */
+    infix fun ProcessIOBuffer.pipe(process: ProcessBuilder) = from(this) pipe process
+
+    /**
      * Starts new pipeline with [file] as an input of given [process].
      * Shall be wrapped with piping DSL
      *
@@ -96,7 +100,7 @@ abstract class ShellPiping (
 
     /**
      * Starts new pipeline with this [File] as an input of given [process].
-     * Shall be wrapped with piping DSL
+     * Part of piping DSL
      *
      * @return this [Pipeline]
      */
@@ -105,7 +109,7 @@ abstract class ShellPiping (
 
     /**
      * Adds [process] process to this pipeline.
-     * Shall be wrapped with piping DSL
+     * Part of piping DSL
      *
      * @return this [Pipeline]
      */
@@ -114,7 +118,7 @@ abstract class ShellPiping (
 
     /**
      * Ends this [Pipeline] with [lambda] function
-     * Shall be wrapped with piping DSL
+     * Part of piping DSL
      *
      * @return this [Pipeline]
      */
@@ -123,7 +127,7 @@ abstract class ShellPiping (
 
     /**
      * Ends this [Pipeline] by writing its output to [file].
-     * Shall be wrapped with piping DSL
+     * Part of piping DSL
      *
      * @return this [Pipeline]
      */
@@ -132,16 +136,31 @@ abstract class ShellPiping (
 
     /**
      * Ends this [Pipeline] by appending its output file [file].
-     * Shall be wrapped with piping DSL
+     * Part of piping DSL
      *
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
     infix fun Pipeline.append(file: File) = appendFile(file)
 
+    private fun forkErr(process: ProcessBuilder, fork: PipelineFork) {
+        ProcessIOBuffer().let {
+            process.withStderrBuffer(it)
+            fork.invoke(it)
+        }
+    }
+
+    /**
+     * Forks current [Pipeline] by creating new [Pipeline] with stderr from last process as an input
+     * Part of piping DSL
+     *
+     * @return this [ProcessBuilder]
+     */
+    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this.also { forkErr(this, fork) }
+
     /**
      * Awaits this [Pipeline]
-     * Shall be wrapped with piping DSL
+     * Part of piping DSL
      *
      * @see Pipeline.await
      * @return this [Pipeline]
