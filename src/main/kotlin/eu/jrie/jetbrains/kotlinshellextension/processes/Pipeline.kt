@@ -46,6 +46,27 @@ class Pipeline private constructor (
     val processes: List<Process>
         get() = processLine.toList()
 
+    /**
+     * Starts new [Pipeline] with process specified by given [ProcessBuilder]
+     *
+     * @see ShellPiping
+     */
+    internal constructor(process: ProcessBuilder, commander: ProcessCommander) : this(commander) {
+        addProcess(process)
+    }
+
+    /**
+     * Starts new [Pipeline] with [file]
+     *
+     * @see ShellPiping
+     */
+    internal constructor(file: File, commander: ProcessCommander) : this(file.inputStream(), commander)
+
+    /**
+     * Starts new [Pipeline] with [string]
+     *
+     * @see ShellPiping
+     */
     internal constructor(string: String, commander: ProcessCommander) : this(string.byteInputStream(), commander)
 
     private constructor(stream: InputStream, commander: ProcessCommander) : this(commander) {
@@ -64,17 +85,28 @@ class Pipeline private constructor (
     }
 
     /**
+     * Starts new [Pipeline] with given [buffer] as start
+     *
+     * @see ShellPiping
+     */
+    internal constructor(buffer: ProcessIOBuffer, commander: ProcessCommander) : this(commander) {
+        lastBuffer = buffer
+    }
+
+    /**
      * Adds [process] to this [Pipeline]
      *
      * @see ShellPiping
      * @return this [Pipeline]
      */
     fun toProcess(process: ProcessBuilder) = apply {
+        addProcess(process.withStdinBuffer(lastBuffer))
+    }
+
+    private fun addProcess(process: ProcessBuilder) = apply {
         processLine.add(
             commander.process(
-                process
-                    .withStdinBuffer(lastBuffer)
-                    .withStdoutBuffer(buffer())
+                process.withStdoutBuffer(buffer())
             ).also { commander.startProcess(it) }
         )
     }
@@ -157,56 +189,6 @@ class Pipeline private constructor (
     }
 
     companion object {
-        /**
-         * Starts new [Pipeline] with process specified by given [start] [ProcessBuilder]
-         *
-         * @see ShellPiping
-         */
-        internal fun from(start: ProcessBuilder, commander: ProcessCommander): Pipeline {
-            val pipeline = Pipeline(commander)
-            val b = pipeline.buffer()
-            start.withStdoutBuffer(b)
-            val process = commander.process(start).also { commander.startProcess(it) }
-            pipeline.processLine.add(process)
-            return pipeline
-        }
-
-        /**
-         * Starts new [Pipeline] with [file] as input of [process]
-         *
-         * @see ShellPiping
-         */
-        internal fun fromFile(file: File, process: ProcessBuilder, commander: ProcessCommander): Pipeline {
-            val pipeline = Pipeline(commander)
-
-            val buffer = ProcessIOBuffer()
-            pipeline.lastBuffer = buffer
-            val fileReadChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
-            pipeline.launchIO {
-                file.inputStream().use {
-                    while (it.available() > 0) {
-                        val packet = it.readPacketAtMost(STREAM_RW_PACKET_SIZE)
-                        fileReadChannel.send(packet)
-                    }
-                    fileReadChannel.close()
-                }
-            }
-            pipeline.launch { buffer.consumeFrom(fileReadChannel) }
-
-            return pipeline.toProcess(process)
-        }
-
-        /**
-         * Starts new [Pipeline] with given [buffer] as start
-         *
-         * @see ShellPiping
-         */
-        internal fun fromBuffer(buffer: ProcessIOBuffer, commander: ProcessCommander): Pipeline {
-            val pipeline = Pipeline(commander)
-            pipeline.lastBuffer = buffer
-            return pipeline
-        }
-
         private const val STREAM_RW_PACKET_SIZE: Long = 256
         private const val STREAM_RW_CHANNEL_BUFFER_SIZE = 16
     }

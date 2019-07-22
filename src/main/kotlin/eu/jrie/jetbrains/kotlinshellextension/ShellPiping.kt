@@ -22,7 +22,7 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    fun from(process: ProcessBuilder) = Pipeline.from(process, commander)
+    fun from(process: ProcessBuilder) = Pipeline(process, commander)
 
     /**
      * Starts new [Pipeline] from this process process one specified by [process].
@@ -69,7 +69,7 @@ abstract class ShellPiping (
      * @see ProcessBuilder.pipe
      * @return this [Pipeline]
      */
-    private fun from(buffer: ProcessIOBuffer) = Pipeline.fromBuffer(buffer, commander)
+    private fun from(buffer: ProcessIOBuffer) = Pipeline(buffer, commander)
 
     /**
      * Starts new [Pipeline] from this [ProcessIOBuffer] to [lambda].
@@ -96,7 +96,7 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    private fun from(file: File, process: ProcessBuilder) = Pipeline.fromFile(file, process, commander)
+    private fun from(file: File) = Pipeline(file, commander)
 
     /**
      * Starts new pipeline with this [File] as an input of given [process].
@@ -105,7 +105,7 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun File.pipe(process: ProcessBuilder) = from(this, process)
+    infix fun File.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
      * Starts new pipeline with this [String].
