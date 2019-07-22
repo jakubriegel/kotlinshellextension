@@ -11,6 +11,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
+import org.opentest4j.AssertionFailedError
 import java.io.File
 
 @ExperimentalCoroutinesApi
@@ -78,7 +79,11 @@ abstract class BaseIntegrationTest {
         }
 
         fun assertRegex(regex: Regex, value: String) {
-            assertTrue(regex.containsMatchIn(value))
+            try {
+                assertTrue(regex.containsMatchIn(value))
+            } catch (e: AssertionFailedError) {
+                throw AssertionFailedError("expected: ${regex.pattern} but was: $value")
+            }
         }
 
         private val testDirPath: String

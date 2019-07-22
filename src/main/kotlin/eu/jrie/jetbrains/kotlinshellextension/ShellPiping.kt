@@ -6,12 +6,9 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.io.core.ByteReadPacket
 import java.io.File
 
-typealias PipelineFork = (ProcessIOBuffer) -> Unit
-
-typealias PipelineForkPair = Pair<ProcessBuilder, PipelineFork>
+typealias PipelineFork = (@Suppress("EXPERIMENTAL_API_USAGE") ProcessIOBuffer) -> Unit
 
 @ExperimentalCoroutinesApi
 abstract class ShellPiping (
@@ -20,30 +17,6 @@ abstract class ShellPiping (
     /**
      * ****************** | ****************** | ******************
      */
-
-    infix fun (() -> ByteReadPacket).pipe(process: ProcessBuilder) {}
-
-    infix fun ProcessBuilder.pipe(fork: PipelineForkPair) = fork.first
-        .let { process ->
-            forkErr(process, fork.second)
-            from(this) pipe process
-        }
-
-
-    infix fun PipelineForkPair.pipe(process: ProcessBuilder): Pipeline {
-        forkErr(first, second)
-        return from(first) pipe process
-    }
-
-    infix fun PipelineForkPair.pipe(lambda: PipelineLambda): Pipeline {
-        forkErr(first, second)
-        return from(first) pipe lambda
-    }
-
-    infix fun PipelineForkPair.pipe(file: File): Pipeline {
-        forkErr(first, second)
-        return from(first) pipe file
-    }
 
     private fun forkErr(process: ProcessBuilder, fork: PipelineFork) {
         ProcessIOBuffer().let {
@@ -58,10 +31,7 @@ abstract class ShellPiping (
 
     private fun from(buffer: ProcessIOBuffer) = Pipeline.fromBuffer(buffer, commander)
 
-    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this to fork
-
-
-    fun forkErr(fork: PipelineFork) = fork
+    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this.also { forkErr(this, fork) }
 
     /**
      * ****************** | ****************** | ******************
@@ -96,6 +66,24 @@ abstract class ShellPiping (
      */
     @ExperimentalCoroutinesApi
     infix fun ProcessBuilder.pipe(lambda: PipelineLambda) = from(this) pipe lambda
+
+    /**
+     * Writes process output [file].
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    infix fun ProcessBuilder.pipe(file: File) = from(this) pipe file
+
+    /**
+     * Appends process output [file].
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    infix fun ProcessBuilder.append(file: File) = from(this) append file
 
     /**
      * Starts new pipeline with [file] as an input of given [process].
@@ -158,16 +146,27 @@ abstract class ShellPiping (
      * @see Pipeline.await
      * @return this [Pipeline]
      */
+    @Suppress("UNUSED_PARAMETER")
     @ExperimentalCoroutinesApi
     suspend infix fun Pipeline.await(all: All) = await()
 }
 
+/**
+ * Object for [all] alias
+ */
 object All
+/**
+ * Alias to be used in piping DSL with [Shell.await]
+ *
+ * Ex: `p1 pipe p2 await all`
+ *
+ * @see ShellPiping
+ * @see Pipeline
+ */
 typealias all = All
 
 /**
  * Alias for piping output to print().
- * To be use with [ShellPiping.pipe]
  *
  * @see ShellPiping
  * @see Pipeline
@@ -175,10 +174,10 @@ typealias all = All
 val stdout: PipelineLambda = { print(it.readText()) }
 
 /**
- * Alias for piping output to nowhere. Works line `> /dev/null`.
- * To be use with [ShellPiping.pipe]
+ * Alias for piping output to nowhere. Works like `> /dev/null`.
+
  *
  * @see ShellPiping
  * @see Pipeline
  */
-val nullout: PipelineLambda = {}
+val nullout: (Any) -> Unit = {}

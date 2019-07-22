@@ -1,7 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.shell
-import eu.jrie.jetbrains.kotlinshellextension.stdout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
 import kotlinx.io.core.ByteReadPacket
@@ -29,17 +28,7 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
 
     @BeforeEach
     fun prepareScript() {
-        script = file("script", printScript(n))
-
-        shell {
-            val chmod = launchSystemProcess {
-                cmd {
-                    "chmod" withArgs listOf("+x", script.name)
-                }
-                dir(directory)
-            }
-            commander.awaitProcess(chmod)
-        }
+        script = scriptFile(n)
     }
 
     @Test
@@ -55,7 +44,7 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         }
 
         // then
-        assertEquals(printScriptOut(n), outFile.withoutLogs())
+        assertEquals(scriptOut(n), outFile.withoutLogs())
     }
 
     @Test
@@ -71,8 +60,8 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         }
 
         // then
-        assertEquals(printScriptStdOut(n), readResult())
-        assertEquals(printScriptStdErr(n), outFile.withoutLogs())
+        assertEquals(scriptStdOut(n), readResult())
+        assertEquals(scriptStdErr(n), outFile.withoutLogs())
     }
 
     @Test
@@ -82,16 +71,17 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd = "./${script.name}"
                 dir(directory)
-            }
+            } forkErr { it pipe storeResult }
 
-            (script forkErr { it pipe storeResult }) pipe stdout
+            val process = commander.process(script)
+            commander.startProcess(process)
 
             commander.awaitAll()
         }
 
         // then
-        assertEquals(printScriptStdOut(n), outFile.withoutLogs())
-        assertEquals(printScriptStdErr(n), readResult())
+        assertEquals(scriptStdOut(n), outFile.withoutLogs())
+        assertEquals(scriptStdErr(n), readResult())
     }
 
     @Test
@@ -114,20 +104,39 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
 
         // then
         assertEquals("", outFile.withoutLogs())
-        assertEquals(printScriptStdOut(n), stdBuilder.build().readText())
-        assertEquals(printScriptStdErr(n), readResult())
+        assertEquals(scriptStdOut(n), stdBuilder.build().readText())
+        assertEquals(scriptStdErr(n), readResult())
     }
 
-    private fun File.withoutLogs()=  StringBuilder().let { b ->
-        readText().lines().forEach {
-            if (!it.matches(logLineRegex)) b.append(it.plus('\n'))
+    @Test
+    fun `should consume long output`() {
+        // given
+        val n = 100_000
+        val scriptCode = scriptCode(n)
+        val stdBuilder = BytePacketBuilder()
+        val storeStd = { it: ByteReadPacket -> stdBuilder.writePacket(it) }
+
+        val scriptName = "script"
+        file(scriptName, scriptCode)
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd = "./$scriptName"
+                dir(directory)
+            }
+
+            (script forkErr  { it pipe storeResult }) pipe storeStd
+
+            commander.awaitAll()
         }
-        b.removeSuffix("\n").toString()
+
+        // then
+        assertEquals(scriptStdOut(n), stdBuilder.build().readText())
+        assertEquals(scriptStdErr(n), readResult())
     }
 
     companion object {
-
-        private val logLineRegex = Regex("^\\d\\d:\\d\\d:\\d\\d\\s[A-Z]+\\s.+$")
 
         private lateinit var defaultOut: PrintStream
 

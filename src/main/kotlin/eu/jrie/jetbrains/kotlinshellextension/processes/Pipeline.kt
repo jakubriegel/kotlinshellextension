@@ -17,6 +17,7 @@ import kotlinx.io.core.ByteReadPacket
 import kotlinx.io.streams.readPacketAtMost
 import kotlinx.io.streams.writePacket
 import java.io.File
+import java.io.FileOutputStream
 
 typealias PipelineLambda = (ByteReadPacket) -> Unit
 
@@ -78,9 +79,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toFile(file: File) = appendFile(
-        file.apply { delete() }
-    )
+    fun toFile(file: File) = apply { writeFile(file, false) }
 
     /**
      * Ends this [Pipeline] with appending its output to [file]
@@ -88,10 +87,12 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun appendFile(file: File) = apply {
+    fun appendFile(file: File) = apply { writeFile(file, true) }
+
+    private fun writeFile(file: File, append: Boolean) {
         val fileWriteChannel: ProcessChannel = Channel(FILE_RW_CHANNEL_BUFFER_SIZE)
         launchIO {
-            file.outputStream().use {
+            FileOutputStream(file, append).use {
                 fileWriteChannel.consumeEach { p ->
                     it.writePacket(p)
                     it.flush()
@@ -100,7 +101,6 @@ class Pipeline private constructor (
             }
         }
         launch { lastBuffer.receiveTo(fileWriteChannel) }
-
     }
 
     /**
@@ -111,6 +111,17 @@ class Pipeline private constructor (
      */
     suspend fun await() = apply {
         processLine.forEach { commander.awaitProcess(it) }
+        asyncJobs.forEach { it.join() }
+    }
+
+    /**
+     * Kills all processes in this [Pipeline]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun kill() = apply {
+        processLine.forEach { commander.killProcess(it) }
         asyncJobs.forEach { it.join() }
     }
 
@@ -132,18 +143,12 @@ class Pipeline private constructor (
          */
         internal fun from(start: ProcessBuilder, commander: ProcessCommander): Pipeline {
             val pipeline = Pipeline(commander)
-            start.withStdoutBuffer(pipeline.buffer())
+            val b = pipeline.buffer()
+            start.withStdoutBuffer(b)
             val process = commander.process(start).also { commander.startProcess(it) }
             pipeline.processLine.add(process)
             return pipeline
         }
-
-        /**
-         * Starts new [Pipeline] with [File] specified by [path] as input of [process]
-         *
-         * @see ShellPiping
-         */
-        internal fun fromFile(path: String, process: ProcessBuilder, commander: ProcessCommander) = fromFile(File(path), process, commander)
 
         /**
          * Starts new [Pipeline] with [file] as input of [process]
