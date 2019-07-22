@@ -18,6 +18,7 @@ import kotlinx.io.streams.readPacketAtMost
 import kotlinx.io.streams.writePacket
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 
 typealias PipelineLambda = (ByteReadPacket) -> Unit
 
@@ -44,6 +45,23 @@ class Pipeline private constructor (
      */
     val processes: List<Process>
         get() = processLine.toList()
+
+    internal constructor(string: String, commander: ProcessCommander) : this(string.byteInputStream(), commander)
+
+    private constructor(stream: InputStream, commander: ProcessCommander) : this(commander) {
+        val buffer = buffer()
+        val channel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
+        launch { buffer.consumeFrom(channel) }
+        launch {
+            stream.use {
+                while (it.available() > 0) {
+                    val packet = it.readPacketAtMost(STREAM_RW_PACKET_SIZE)
+                    channel.send(packet)
+                }
+                channel.close()
+            }
+        }
+    }
 
     /**
      * Adds [process] to this [Pipeline]
@@ -90,7 +108,7 @@ class Pipeline private constructor (
     fun appendFile(file: File) = apply { writeFile(file, true) }
 
     private fun writeFile(file: File, append: Boolean) {
-        val fileWriteChannel: ProcessChannel = Channel(FILE_RW_CHANNEL_BUFFER_SIZE)
+        val fileWriteChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
         launchIO {
             FileOutputStream(file, append).use {
                 fileWriteChannel.consumeEach { p ->
@@ -125,6 +143,9 @@ class Pipeline private constructor (
         asyncJobs.forEach { it.join() }
     }
 
+    /**
+     * Returns new [ProcessIOBuffer] and sets it as [lastBuffer]
+     */
     private fun buffer() = ProcessIOBuffer().also { lastBuffer = it }
 
     private fun launchIO(ioBlock: suspend CoroutineScope.() -> Unit) = launch {
@@ -160,11 +181,11 @@ class Pipeline private constructor (
 
             val buffer = ProcessIOBuffer()
             pipeline.lastBuffer = buffer
-            val fileReadChannel: ProcessChannel = Channel(FILE_RW_CHANNEL_BUFFER_SIZE)
+            val fileReadChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
             pipeline.launchIO {
                 file.inputStream().use {
                     while (it.available() > 0) {
-                        val packet = it.readPacketAtMost(FILE_RW_PACKET_SIZE)
+                        val packet = it.readPacketAtMost(STREAM_RW_PACKET_SIZE)
                         fileReadChannel.send(packet)
                     }
                     fileReadChannel.close()
@@ -186,8 +207,8 @@ class Pipeline private constructor (
             return pipeline
         }
 
-        private const val FILE_RW_PACKET_SIZE: Long = 256
-        private const val FILE_RW_CHANNEL_BUFFER_SIZE = 16
+        private const val STREAM_RW_PACKET_SIZE: Long = 256
+        private const val STREAM_RW_CHANNEL_BUFFER_SIZE = 16
     }
 
 }

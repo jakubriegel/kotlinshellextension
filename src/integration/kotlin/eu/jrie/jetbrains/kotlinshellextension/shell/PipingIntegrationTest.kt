@@ -196,6 +196,26 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
+    fun `should pipe from string`() {
+        // given
+        val pattern = "sed"
+
+        // when
+        shell {
+            val grep = systemProcess {
+                cmd {
+                    "grep" withArg pattern
+                }
+            }
+
+            LOREM_IPSUM pipe grep pipe storeResult await all
+        }
+
+        // then
+        assertEquals(LOREM_IPSUM.grep(pattern), readResult())
+    }
+
+    @Test
     fun `should fork stderr for single process`() {
         // given
         val n = 5

@@ -96,7 +96,7 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    fun from(file: File, process: ProcessBuilder) = Pipeline.fromFile(file, process, commander)
+    private fun from(file: File, process: ProcessBuilder) = Pipeline.fromFile(file, process, commander)
 
     /**
      * Starts new pipeline with this [File] as an input of given [process].
@@ -106,6 +106,22 @@ abstract class ShellPiping (
      */
     @ExperimentalCoroutinesApi
     infix fun File.pipe(process: ProcessBuilder) = from(this, process)
+
+    /**
+     * Starts new pipeline with this [String].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    private fun from(string: String) = Pipeline(string, commander)
+
+    /**
+     * Starts new pipeline with this [String] as an input of given [process].
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    infix fun String.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
      * Adds [process] process to this pipeline.
