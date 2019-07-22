@@ -1,6 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
@@ -11,7 +10,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -26,35 +25,24 @@ import java.util.*
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
+@ExperimentalCoroutinesApi
 class SystemProcessTest {
     private val executorMock = spyk<ProcessExecutor>()
-    private val input = ProcessStream()
-    private val stdout = ProcessStream()
-    private val stderr = ProcessStream()
     private val directory = File("")
 
-    private val process = SystemProcess(
-        VIRTUAL_PID,
-        PROCESS_COMMAND,
-        PROCESS_ARGS,
-        input,
-        stdout,
-        stderr,
-        ENVIRONMENT,
-        directory,
-        spyk(),
-        executorMock
-    )
+    private lateinit var process: SystemProcess
 
     @Test
     fun `should initialize the executor`() {
+        // when
+        runTest { /* create process */ }
+
+        // then
         verify (exactly = 1) {
             executorMock.command(listOf(PROCESS_COMMAND).plus(PROCESS_ARGS))
             executorMock.destroyOnExit()
-            executorMock.addListener(ofType(SystemProcessListener::class))
-            executorMock.redirectInput(ofType(SystemProcess.SystemProcessInputStream::class))
+            executorMock.addListener(ofType(SystemProcess.SystemProcessListener::class))
             executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class))
-            executorMock.redirectError(ofType(SystemProcess.SystemProcessLogOutputStream::class))
             executorMock.environment(ENVIRONMENT)
             executorMock.directory(directory)
         }
@@ -72,7 +60,7 @@ class SystemProcessTest {
         every { executorMock.start() } returns startedProcessMock
 
         // when
-        process.start()
+        runTest { process.start() }
 
         // then
         verify (exactly = 1) { executorMock.start() }
@@ -80,13 +68,13 @@ class SystemProcessTest {
 
     @Test
     fun `should return true if process if alive`() {
-        // given
-        process.pcb.startedProcess = mockk {
-            every { process.isAlive } returns true
-        }
-
         // when
-        val result = process.isAlive()
+        val result = runTest {
+            process.pcb.startedProcess = mockk {
+                every { process.isAlive } returns true
+            }
+            process.isAlive()
+        }
 
         // then
         assertTrue(result)
@@ -94,13 +82,14 @@ class SystemProcessTest {
 
     @Test
     fun `should return false if process is not alive`() {
-        // given
-        process.pcb.startedProcess = mockk {
-            every { process.isAlive } returns false
-        }
-
         // when
-        val result = process.isAlive()
+        val result = runTest {
+            process.pcb.startedProcess = mockk {
+                every { process.isAlive } returns false
+            }
+
+            process.isAlive()
+        }
 
         // then
         assertFalse(result)
@@ -108,11 +97,12 @@ class SystemProcessTest {
 
     @Test
     fun `should return false if process has not started yet`() {
-        // given
-        process.pcb.startedProcess = null
-
         // when
-        val result = process.isAlive()
+        val result = runTest {
+            process.pcb.startedProcess = null
+
+            process.isAlive()
+        }
 
         // then
         assertFalse(result)
@@ -120,22 +110,24 @@ class SystemProcessTest {
 
     @Test
     @ObsoleteCoroutinesApi
-    fun `should blocking await process`() = runBlocking {
+    fun `should suspend await process`() {
         // given
-        val p = processWithGivenScope(this)
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk {
                 every { exitValue } returns 0
             }
         }
 
-        p.pcb.startedProcess = mockk {
-            every { process.isAlive } returns true
-            every { future } returns futureMock
-        }
-
         // when
-        p.await()
+        runTest {
+            process.pcb.startedProcess = mockk {
+                every { process.isAlive } returns true
+                every { future } returns futureMock
+            }
+
+            process.closeOut()
+            process.await()
+        }
 
         // then
         verify (exactly = 1) { futureMock.get() }
@@ -143,9 +135,8 @@ class SystemProcessTest {
 
     @Test
     @ObsoleteCoroutinesApi
-    fun `should await process with given timeout`() = runBlocking {
+    fun `should await process with given timeout`() {
         // given
-        val p = processWithGivenScope(this)
         val timeout: Long = 500
 
         val futureMock = mockk<Future<ProcessResult>> {
@@ -154,13 +145,16 @@ class SystemProcessTest {
             }
         }
 
-        p.pcb.startedProcess = mockk {
-            every { process.isAlive } returns true
-            every { future } returns futureMock
-        }
-
         // when
-        p.await(timeout)
+        runTest {
+            process.pcb.startedProcess = mockk {
+                every { process.isAlive } returns true
+                every { future } returns futureMock
+            }
+
+            process.closeOut()
+            process.await(timeout)
+        }
 
         // then
         verify (exactly = 1) { futureMock.get(timeout, TimeUnit.MILLISECONDS) }
@@ -169,20 +163,21 @@ class SystemProcessTest {
 
     @Test
     @ObsoleteCoroutinesApi
-    fun `should not await not alive process`() = runBlocking {
+    fun `should not await not alive process`() {
         // given
-        val p = processWithGivenScope(this)
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk()
         }
 
-        p.pcb.startedProcess = mockk {
-            every { process.isAlive } returns false
-            every { future } returns futureMock
-        }
-
         // when
-        p.await()
+        runTest {
+            process.pcb.startedProcess = mockk {
+                every { process.isAlive } returns false
+                every { future } returns futureMock
+            }
+
+            process.await()
+        }
 
         // then
         verify (exactly = 0) { futureMock.get() }
@@ -201,10 +196,13 @@ class SystemProcessTest {
         }
 
         val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
-        process.pcb.startedProcess = startedProcessMock
 
         // when
-        process.kill()
+        runTest {
+            process.pcb.startedProcess = startedProcessMock
+
+            process.kill()
+        }
 
         // then
         verify { processMock.isAlive }
@@ -228,10 +226,12 @@ class SystemProcessTest {
         }
 
         val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
-        process.pcb.startedProcess = startedProcessMock
 
         // when
-        assertThrows<Exception> { process.kill() }
+        runTest {
+            process.pcb.startedProcess = startedProcessMock
+            assertThrows<Exception> { process.kill() }
+        }
 
         // then
         verify { processMock.isAlive }
@@ -253,10 +253,13 @@ class SystemProcessTest {
         val futureMock = mockk<Future<ProcessResult>>()
 
         val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
-        process.pcb.startedProcess = startedProcessMock
 
         // when
-        process.kill()
+        runTest {
+            process.pcb.startedProcess = startedProcessMock
+
+            process.kill()
+        }
 
         // then
         verify { processMock.isAlive }
@@ -268,16 +271,21 @@ class SystemProcessTest {
         confirmVerified(futureMock)
     }
 
-    private fun processWithGivenScope(scope: CoroutineScope) = SystemProcess(
+    private fun <T> runTest(test: suspend SystemProcessTest.() -> T) = runBlocking {
+        process = SystemProcess(
             VIRTUAL_PID,
             PROCESS_COMMAND,
             PROCESS_ARGS,
-            input,
-            stdout,
-            stderr,
             ENVIRONMENT,
             directory,
-            scope,
-            spyk()
+            null,
+            null,
+            null,
+            this,
+            executorMock
         )
+        val result = test()
+        process.closeOut()
+        result
+    }
 }

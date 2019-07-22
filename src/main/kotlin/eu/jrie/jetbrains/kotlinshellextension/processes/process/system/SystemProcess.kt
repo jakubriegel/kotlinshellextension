@@ -2,46 +2,56 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.PCB
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessInputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessOutputStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.apache.commons.io.output.NullOutputStream
+import kotlinx.io.core.BytePacketBuilder
+import kotlinx.io.core.ByteReadPacket
+import kotlinx.io.core.readBytes
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
+import org.zeroturnaround.exec.listener.ProcessListener
 import org.zeroturnaround.exec.stream.LogOutputStream
 import java.io.File
 import java.io.InputStream
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+@ExperimentalCoroutinesApi
 class SystemProcess @TestOnly internal constructor (
     vPID: Int,
     val command: String,
     val arguments: List<String>,
-    input: ProcessStream,
-    stdout: ProcessStream,
-    stderr: ProcessStream,
     environment: Map<String, String>,
     directory: File,
+    stdinBuffer: ProcessIOBuffer?,
+    stdoutBuffer: ProcessIOBuffer?,
+    stderrBuffer: ProcessIOBuffer?,
     scope: CoroutineScope,
     private val executor: ProcessExecutor
-) : Process(vPID, input, stdout, stderr, environment, directory, scope) {
+) : Process(vPID, environment, directory, stdinBuffer, stdoutBuffer, stderrBuffer, scope) {
 
     constructor(vPID: Int,
                 command: String,
                 arguments: List<String>,
-                input: ProcessStream,
-                stdout: ProcessStream,
-                stderr: ProcessStream,
                 environment: Map<String, String>,
                 directory: File,
+                stdinBuffer: ProcessIOBuffer?,
+                stdoutBuffer: ProcessIOBuffer?,
+                stderrBuffer: ProcessIOBuffer?,
                 scope: CoroutineScope
-    ) : this(vPID, command, arguments, input, stdout, stderr, environment, directory, scope, ProcessExecutor())
+    ) : this(vPID, command, arguments, environment, directory, stdinBuffer, stdoutBuffer, stderrBuffer, scope, ProcessExecutor())
 
     override val pcb = SystemPCB()
 
@@ -59,7 +69,7 @@ class SystemProcess @TestOnly internal constructor (
             .command(listOf(command).plus(arguments))
             .destroyOnExit()
             .addListener(SystemProcessListener(this))
-            .redirectInput(SystemProcessInputStream(input))
+            .redirectInput()
             .redirectOutput()
             .environment(environment)
             .directory(directory)
@@ -88,51 +98,94 @@ class SystemProcess @TestOnly internal constructor (
         }
     }
 
-    override fun destroy() = ifAlive {
-        with(pcb.startedProcess!!) {
-            val result = future.cancel(true)
-            if (!result) throw Exception("cannot kill process $name")
+    override fun destroy() {
+        if(isAlive()) {
+            with(pcb.startedProcess!!) {
+                val result = future.cancel(true)
+                if (!result) throw Exception("cannot kill process $name")
+            }
         }
     }
 
+    override fun toString() = name
+
     internal class SystemProcessLogOutputStream (
-        private val sink: ProcessInputStream
+        private val sink: ProcessSendChannel,
+        private val scope: CoroutineScope
     ) : LogOutputStream() {
         override fun processLine(line: String?) {
-            if (line != null) sink.writeAsLine(line)
+            if (line != null) {
+                BytePacketBuilder()
+                    .append(line.plus('\n'))
+                    .build()
+                    .also {
+                        runBlocking(scope.coroutineContext) { sink.send(it) }
+                    }
+            }
         }
     }
 
     internal class SystemProcessInputStream (
-        private val tap: ProcessOutputStream
+        private val tap: ProcessReceiveChannel,
+        private val scope: CoroutineScope
     ) : InputStream() {
+
+        private val buffer = Channel<Byte>(UNLIMITED)
+
+        init {
+            scope.launch { bufferData() }
+        }
+
         override fun read(): Int {
             return try {
-                tap.read().toInt()
+                runBlocking(scope.coroutineContext) { buffer.receive().toInt() }
             }
             catch (e: ClosedReceiveChannelException) {
                 close()
                 -1
             }
         }
+
+        private suspend fun bufferData() {
+            tap.consumeEach { bufferData(it) }
+            buffer.close()
+        }
+
+        private suspend fun bufferData(packet: ByteReadPacket) {
+            packet.readBytes().forEach {
+                buffer.send(it)
+            }
+        }
+
+    }
+
+    class SystemProcessListener (
+        private val process: SystemProcess
+    ) : ProcessListener() {
+        override fun afterStop(process: java.lang.Process?) = finalizeProcess()
+
+        private fun finalizeProcess() {
+            logger.debug("finalizing $process}")
+            process.closeOut()
+            logger.debug("finalized $process}")
+        }
+    }
+
+    private fun ProcessExecutor.redirectInput() = apply {
+        if (stdin != null) redirectInput(SystemProcessInputStream(stdin, scope))
     }
 
     private fun ProcessExecutor.redirectOutput() = apply {
-        when (stdout) {
-            is NullOutputStream -> if (stderr !is NullOutputStream) redirectStdErr()
+        when (stderr) {
+            null -> redirectStdOut()
             else -> {
-                when (stderr) {
-                    is NullOutputStream -> redirectStdOut()
-                    else -> {
-                        redirectStdOut()
-                        redirectStdErr()
-                    }
-                }
+                redirectStdOut()
+                redirectStdErr()
             }
         }
     }
 
-    private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout))
+    private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout, scope))
 
-    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr))
+    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr!!, scope))
 }

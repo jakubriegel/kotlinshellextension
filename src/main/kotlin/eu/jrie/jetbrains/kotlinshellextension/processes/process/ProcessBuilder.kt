@@ -1,7 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.NullProcessStream
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.stream.ProcessStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
@@ -10,18 +8,23 @@ abstract class ProcessBuilder  {
 
     protected var vPID: Int = -1
 
-    var input: ProcessStream = NullProcessStream()
-        protected set
-    var stdout: ProcessStream = NullProcessStream()
-        protected set
-    var stderr: ProcessStream = NullProcessStream()
-        protected set
-
     var directory = currentDir()
         protected set
 
     protected val environment = mutableMapOf<String, String>()
     fun environment() = environment.toMap()
+
+    @ExperimentalCoroutinesApi
+    var stdinBuffer: ProcessIOBuffer? = null
+        protected set
+
+    @ExperimentalCoroutinesApi
+    var stdoutBuffer: ProcessIOBuffer? = null
+        protected set
+
+    @ExperimentalCoroutinesApi
+    var stderrBuffer: ProcessIOBuffer? = null
+        protected set
 
     protected lateinit var scope: CoroutineScope
 
@@ -33,125 +36,33 @@ abstract class ProcessBuilder  {
     internal fun withVirtualPID(vPID: Int) = apply { this.vPID = vPID }
 
     /**
-     * Will redirect the input of created process to the new [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followIn() = followIn(ProcessStream())
-
-    /**
-     * Will redirect the input of created process to the given [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followIn(source: ProcessStream) = apply { input = source }
-
-    /**
-     * Will set given [File] as input of created [Process]
-     *
-     * @return this builder
-     */
-    fun followFile(file: File) = followIn(ProcessStream().fromFile(file))
-
-    /**
-     * Will redirect merged stdout and stderr of created [Process] to the new [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followMergedOut() = followMergedOut(ProcessStream())
-
-    /**
-     * Will redirect merged stdout and stderr of created [Process] to the given [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followMergedOut(stream: ProcessStream) = apply { stdout = stream }
-
-    /**
-     * Will redirect merged stdout and stderr of created [Process] to the given [File]
+     * Sets [buffer] as a source of [Process.stdin]
      *
      * @return this builder
      */
     @ExperimentalCoroutinesApi
-    fun followMergedOut(file: File) = followMergedOut(ProcessStream().apply { invokeOnReady { subscribe(file) } } )
-
-    /**
-     * Will redirect separated stdout and stderr of created [Process] to 2 separated new [ProcessStream]s
-     *
-     * @return this builder
-     */
-    fun followOut() = apply {
-        followStdOut()
-        followStdErr()
+    internal fun withStdinBuffer(buffer: ProcessIOBuffer) = apply {
+        stdinBuffer = buffer
     }
 
     /**
-     * Will redirect separated stdout and stderr of created [Process] to given [ProcessStream]s
+     * Sets [buffer] as a destination of [Process.stdout]
      *
      * @return this builder
      */
-    fun followOut(stdStream: ProcessStream, errStream: ProcessStream) = apply {
-        followStdOut(stdStream)
-        followStdErr(errStream)
+    @ExperimentalCoroutinesApi
+    internal fun withStdoutBuffer(buffer: ProcessIOBuffer) = apply {
+        stdoutBuffer = buffer
     }
 
     /**
-     * Will redirect separated stdout and stderr of created [Process] to given [File]s
+     * Sets [buffer] as a destination of [Process.stderr]
      *
      * @return this builder
      */
     @ExperimentalCoroutinesApi
-    fun followOut(stdFile: File, errFile: File) = followOut(
-        ProcessStream().apply { invokeOnReady { subscribe(stdFile) } },
-        ProcessStream().apply { invokeOnReady { subscribe(errFile) } }
-    )
-
-    /**
-     * Will redirect stdout of created [Process] to the new [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followStdOut() = followStdOut(ProcessStream())
-
-    /**
-     * Will redirect stdout of created [Process] to the given [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followStdOut(stream: ProcessStream) = apply { stdout = stream }
-
-    /**
-     * Will redirect stdout of created [Process] to the given [File]
-     *
-     * @return this builder
-     */
-    @ExperimentalCoroutinesApi
-    fun followStdOut(file: File) = apply {
-        followStdOut(ProcessStream().apply { invokeOnReady { subscribe(file) } })
-    }
-
-    /**
-     * Will redirect stderr of created [Process] to the new [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followStdErr() = followStdErr(ProcessStream())
-
-    /**
-     * Will redirect stderr of created [Process] to the given [ProcessStream]
-     *
-     * @return this builder
-     */
-    fun followStdErr(stream: ProcessStream) = apply { stderr = stream }
-
-    /**
-     * Will redirect stderr of created [Process] to the given [File]
-     *
-     * @return this builder
-     */
-    @ExperimentalCoroutinesApi
-    fun followStdErr(file: File) = apply {
-        followStdErr(ProcessStream().apply { invokeOnReady { subscribe(file) } })
+    internal fun withStderrBuffer(buffer: ProcessIOBuffer) = apply {
+        stderrBuffer = buffer
     }
 
     /**
@@ -161,7 +72,7 @@ abstract class ProcessBuilder  {
      * @return this builder
      */
     fun addEnv(env: Pair<String, String>) = apply {
-        environment.put(env.first, env.second)
+        environment[env.first] = env.second
     }
 
     /**
@@ -205,11 +116,11 @@ abstract class ProcessBuilder  {
     /**
      * Sets execution directory
      *
-     * @param dir directory to execute the [Process] from
+     * @param dir directory to execute the [Process] fromBuffer
      * @return this builder
      */
     fun withDir(dir: File) = apply {
-        if (!dir.isDirectory) throw Exception("Process must be executed from directory")
+        if (!dir.isDirectory) throw Exception("Process must be executed fromBuffer directory")
         directory = dir
     }
 
@@ -221,10 +132,11 @@ abstract class ProcessBuilder  {
     internal fun withScope(scope: CoroutineScope) = apply { this.scope = scope }
 
     /**
-     * Builds a [Process] from this builder
+     * Builds a [Process] fromBuffer this builder
      *
      * @return new running [Process]
      */
+    @ExperimentalCoroutinesApi
     internal abstract fun build(): Process
 
     companion object {

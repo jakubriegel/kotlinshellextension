@@ -3,8 +3,10 @@ package eu.jrie.jetbrains.kotlinshellextension.processes
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
 
+@ExperimentalCoroutinesApi
 class ProcessCommander (
     val scope: CoroutineScope
 ) {
