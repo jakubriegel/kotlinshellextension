@@ -1,6 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
@@ -11,10 +10,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -31,7 +28,6 @@ import java.util.concurrent.TimeUnit
 @ExperimentalCoroutinesApi
 class SystemProcessTest {
     private val executorMock = spyk<ProcessExecutor>()
-    private val input: ProcessChannel = Channel()
     private val directory = File("")
 
     private lateinit var process: SystemProcess
@@ -292,17 +288,4 @@ class SystemProcessTest {
         process.closeOut()
         result
     }
-
-    private fun processWithGivenScope(scope: CoroutineScope) = SystemProcess(
-        VIRTUAL_PID,
-        PROCESS_COMMAND,
-        PROCESS_ARGS,
-        ENVIRONMENT,
-        directory,
-        null,
-        null,
-        null,
-        scope,
-        spyk()
-    )
 }

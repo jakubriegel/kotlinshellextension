@@ -89,11 +89,6 @@ abstract class BaseIntegrationTest {
         private val testDirPath: String
             get() = "${System.getProperty("user.dir")}/testdata"
 
-        private fun currentDir(): File {
-            val path = System.getProperty("user.dir")
-            return File(path)
-        }
-
         const val LOREM_IPSUM = "Lorem ipsum dolor sit amet,\n" +
                                 "consectetur adipiscing elit.\n" +
                                 "Etiam sed pharetra enim.\n" +

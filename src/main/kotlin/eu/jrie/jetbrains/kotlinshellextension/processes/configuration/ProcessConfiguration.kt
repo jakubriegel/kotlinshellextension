@@ -63,12 +63,3 @@ class EnvironmentConfiguration {
     val environment = mutableMapOf<String, String>()
     infix fun String.to(value: String) = environment.putIfAbsent(this, value)
 }
-
-abstract class InOutConfiguration {
-    var configure: ProcessBuilder.() -> Unit = {}
-        protected set
-
-    protected fun config(action: ProcessBuilder.() -> Unit) {
-        configure = action
-    }
-}

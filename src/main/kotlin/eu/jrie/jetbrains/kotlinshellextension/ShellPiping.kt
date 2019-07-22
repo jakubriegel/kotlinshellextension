@@ -90,7 +90,7 @@ abstract class ShellPiping (
     infix fun ProcessIOBuffer.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
-     * Starts new pipeline with [file] as an input of given [process].
+     * Starts new pipeline with [file].
      * Shall be wrapped with piping DSL
      *
      * @return this [Pipeline]

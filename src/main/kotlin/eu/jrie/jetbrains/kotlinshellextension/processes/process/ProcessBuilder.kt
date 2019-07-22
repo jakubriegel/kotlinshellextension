@@ -72,7 +72,7 @@ abstract class ProcessBuilder  {
      * @return this builder
      */
     fun addEnv(env: Pair<String, String>) = apply {
-        environment.put(env.first, env.second)
+        environment[env.first] = env.second
     }
 
     /**
