@@ -1,6 +1,7 @@
-package eu.jrie.jetbrains.kotlinshellextension.processes
+package eu.jrie.jetbrains.kotlinshellextension.processes.pipeline
 
 import eu.jrie.jetbrains.kotlinshellextension.ShellPiping
+import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
@@ -118,7 +119,7 @@ class Pipeline private constructor (
      * @return this [Pipeline]
      */
     fun toLambda(lambda: PipelineLambda) = apply {
-        val lambdaChannel: ProcessChannel = Channel(128) // TODO: size
+        val lambdaChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
         launch { lastBuffer.receiveTo(lambdaChannel) }
         launch { lambdaChannel.consumeEach(lambda) }
     }

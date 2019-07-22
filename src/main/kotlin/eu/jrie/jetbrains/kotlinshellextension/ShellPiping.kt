@@ -1,11 +1,12 @@
 package eu.jrie.jetbrains.kotlinshellextension
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.Pipeline
-import eu.jrie.jetbrains.kotlinshellextension.processes.PipelineLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
+import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.io.core.BytePacketBuilder
 import java.io.File
 
 typealias PipelineFork = (@Suppress("EXPERIMENTAL_API_USAGE") ProcessIOBuffer) -> Unit
@@ -22,7 +23,8 @@ abstract class ShellPiping (
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    fun from(process: ProcessBuilder) = Pipeline(process, commander)
+    fun from(process: ProcessBuilder) =
+        Pipeline(process, commander)
 
     /**
      * Starts new [Pipeline] from this process process one specified by [process].
@@ -45,13 +47,22 @@ abstract class ShellPiping (
     infix fun ProcessBuilder.pipe(lambda: PipelineLambda) = from(this) pipe lambda
 
     /**
-     * Writes process output [file].
+     * Writes process output to [file].
      * Part of piping DSL
      *
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
     infix fun ProcessBuilder.pipe(file: File) = from(this) pipe file
+
+    /**
+     * Writes process output to [packetBuilder].
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    infix fun ProcessBuilder.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
 
     /**
      * Appends process output [file].
@@ -69,7 +80,8 @@ abstract class ShellPiping (
      * @see ProcessBuilder.pipe
      * @return this [Pipeline]
      */
-    private fun from(buffer: ProcessIOBuffer) = Pipeline(buffer, commander)
+    private fun from(buffer: ProcessIOBuffer) =
+        Pipeline(buffer, commander)
 
     /**
      * Starts new [Pipeline] from this [ProcessIOBuffer] to [lambda].
@@ -113,7 +125,8 @@ abstract class ShellPiping (
      *
      * @return this [Pipeline]
      */
-    private fun from(string: String) = Pipeline(string, commander)
+    private fun from(string: String) =
+        Pipeline(string, commander)
 
     /**
      * Starts new pipeline with this [String] as an input of given [process].
@@ -151,6 +164,17 @@ abstract class ShellPiping (
     infix fun Pipeline.pipe(file: File) = toFile(file)
 
     /**
+     * Ends this [Pipeline] by passing reasult to given [BytePacketBuilder]
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    infix fun Pipeline.pipe(packetBuilder: BytePacketBuilder) = toLambda {
+        packetBuilder.writePacket(it)
+    }
+
+    /**
      * Ends this [Pipeline] by appending its output file [file].
      * Part of piping DSL
      *
@@ -184,6 +208,8 @@ abstract class ShellPiping (
     @Suppress("UNUSED_PARAMETER")
     @ExperimentalCoroutinesApi
     suspend infix fun Pipeline.await(all: All) = await()
+
+    fun BytePacketBuilder.readString() = use { build().readText() }
 }
 
 /**

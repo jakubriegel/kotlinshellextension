@@ -6,6 +6,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.shell
 import eu.jrie.jetbrains.kotlinshellextension.stdout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.io.core.BytePacketBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -213,6 +214,31 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
 
         // then
         assertEquals(LOREM_IPSUM.grep(pattern), readResult())
+    }
+
+    @Test
+    fun `should pipe to PacketBuilder`() {
+        // given
+        val n = 5
+        val scriptCode = scriptFile(n)
+
+        var result: String? = null
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd = "./${scriptCode.name}"
+                dir(directory)
+            }
+
+            val resultBuilder = BytePacketBuilder()
+
+            script forkErr nullout pipe resultBuilder await all
+            result = resultBuilder.readString()
+        }
+
+        // then
+        assertEquals(scriptStdOut(n), result)
     }
 
     @Test
