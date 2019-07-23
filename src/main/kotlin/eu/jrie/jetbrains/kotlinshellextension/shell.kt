@@ -1,80 +1,105 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package eu.jrie.jetbrains.kotlinshellextension
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.Pipeline
+import eu.jrie.jetbrains.kotlinshellextension.Shell.Companion.logger
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.KtsProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.ProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.io.File
 
-fun shell(script: Shell.() -> Unit) {
-    runBlocking {
-        Shell(ProcessCommander(this)).apply(script)
-    }
+typealias ShellScript = suspend Shell.() -> Unit
+
+@ExperimentalCoroutinesApi
+suspend fun shell(
+    env: Map<String, String>? = null,
+    dir: File? = null,
+    script: ShellScript
+) = coroutineScope { shell(env, dir, this, script) }
+
+@ExperimentalCoroutinesApi
+suspend fun shell(
+    env: Map<String, String>? = null,
+    dir: File? = null,
+    scope: CoroutineScope,
+    script: ShellScript
+) {
+    scope.launch { shell(env, dir, ProcessCommander(scope), script) }
+    logger.debug("shell end")
 }
 
-class Shell constructor (
-    private val commander: ProcessCommander
+@ExperimentalCoroutinesApi
+suspend fun shell(
+    env: Map<String, String>? = null,
+    dir: File? = null,
+    commander: ProcessCommander,
+    script: ShellScript
 ) {
-    fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration().apply(config).builder()
+    Shell
+        .build(env, dir, commander)
+        .script()
+    logger.debug("script end")
+}
 
-    fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = process(
-        SystemProcessConfiguration().apply(config)
-    ).apply { start() }
+@ExperimentalCoroutinesApi
+open class Shell private constructor (
+    val environment: Map<String, String>,
+    val directory: File,
+    val commander: ProcessCommander
+) : ShellPiping(commander) {
 
-    fun launchKtsProcess(config: KtsProcessConfiguration.() -> Unit) = process(KtsProcessConfiguration().apply(config))
+    fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration()
+        .apply(config)
+        .configureBuilder()
 
-    fun process(config: ProcessConfiguration) = process(config.builder())
+    fun ktsProcess(config: KtsProcessConfiguration.() -> Unit) = KtsProcessConfiguration()
+        .apply(config)
+        .configureBuilder()
 
-    fun process(builder: ProcessBuilder) = commander.process(builder)
+    private fun ProcessConfiguration.configureBuilder(): ProcessBuilder {
+        env(environment)
+        dir(directory)
+        return builder()
+    }
+
+    fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = launchProcess(systemProcess(config))
+
+    fun launchKtsProcess(config: KtsProcessConfiguration.() -> Unit) = launchProcess(ktsProcess(config))
+
+    private fun launchProcess(builder: ProcessBuilder) = process(builder).also { commander.startProcess(it) }
+
+    private fun process(builder: ProcessBuilder) = commander.createProcess(builder)
 
     fun ps() = println(commander.status())
 
-    infix fun ProcessBuilder.pipe(to: ProcessBuilder) = Pipeline.from(this, commander) pipe to
+    suspend fun shell(
+        env: Map<String, String> = emptyMap(),
+        dir: File = directory,
+        script: ShellScript
+    ) = shell(env, dir, commander, script)
 
-    @ExperimentalCoroutinesApi
-    infix fun ProcessBuilder.pipe(to: (Byte) -> Unit) = Pipeline.from(this, commander) pipe to
+    companion object {
 
-    @ExperimentalCoroutinesApi
-    @Suppress("UNUSED_PARAMETER")
-    infix fun ProcessBuilder.pipe(to: Print) = pipe { print(it.toChar()) }
+        fun build(env: Map<String, String>?, dir: File?, commander: ProcessCommander) = Shell(
+            env ?: emptyMap(),
+            assertDir(dir ?: currentDir()),
+            commander
+        )
 
-    infix fun File.pipe(to: ProcessBuilder) = Pipeline.fromFile(this, to, commander)
+        internal val logger = LoggerFactory.getLogger(Shell::class.java)
 
-    infix fun Pipeline.pipe(to: ProcessBuilder) = toProcess(to)
+        private fun currentDir(): File {
+            val path = System.getProperty("user.dir")
+            return File(path)
+        }
 
-    @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(to: (Byte) -> Unit) = apply {
-        processLine.last().stdout.subscribe(to)
-        // TODO: implement KtsProcess
+        private fun assertDir(dir: File) = dir.also { assert(it.isDirectory) }
     }
-
-    @ExperimentalCoroutinesApi
-    @Suppress("UNUSED_PARAMETER")
-    infix fun Pipeline.pipe(to: Print) = pipe { print(it.toChar()) }
-
-    @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(to: File) = toFile(to)
-
-    @ExperimentalCoroutinesApi
-    infix fun Pipeline.append(to: File) = appendFile(to)
 }
-
-/**
- * Keyword for piping stdout to console. Should be used with alias [print]
- *
- * @see Pipeline
- */
-object Print
-
-/**
- * Alias keyword for piping stdout to console
- *
- * sample: `p1 pipe p2 pipe print`
- *
- * @see Pipeline
- */
-typealias print = Print

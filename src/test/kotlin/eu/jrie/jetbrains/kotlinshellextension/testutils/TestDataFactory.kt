@@ -1,8 +1,8 @@
 package eu.jrie.jetbrains.kotlinshellextension.testutils
 
 object TestDataFactory {
-    // constants
     const val VIRTUAL_PID = 1
+    const val PROCESS_NAME = "[name]"
 
     const val PROCESS_COMMAND = "some_cmd"
     val PROCESS_ARGS = listOf("arg1", "arg2", "arg3")
