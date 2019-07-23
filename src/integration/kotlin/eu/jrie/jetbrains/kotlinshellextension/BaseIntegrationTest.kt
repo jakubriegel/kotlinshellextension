@@ -54,12 +54,6 @@ abstract class BaseIntegrationTest {
         it.mkdirs()
     }
 
-//    protected fun <T> testBlocking(test: suspend () -> T) = runBlocking {
-//        commander = ProcessCommander(this)
-//        scope = commander.scope
-//        withContext(Dispatchers.Default) { test() }
-//    }
-
     @TestOnly
     protected fun shell(script: suspend Shell.() -> Unit) = runBlocking {
         shell(null, directory, this, script)
