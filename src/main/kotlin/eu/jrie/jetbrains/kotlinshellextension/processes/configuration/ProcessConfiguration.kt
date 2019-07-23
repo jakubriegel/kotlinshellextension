@@ -6,34 +6,30 @@ import java.io.File
 abstract class ProcessConfiguration {
     val environment = mutableMapOf<String, String>()
 
+    @Deprecated("dev", ReplaceWith(""))
     fun env(env: Pair<String, String>) {
         environment[env.first] = env.second
     }
 
-    fun env(env: Map<String, String>) {
+    fun env(env: Map<String, String>) = apply {
         environment.putAll(env)
     }
 
+    @Deprecated("dev", ReplaceWith(""))
     fun env(config: EnvironmentConfiguration.() -> Unit) {
         environment.putAll(
             EnvironmentConfiguration().apply(config).environment
         )
     }
 
-    var configureInput: ProcessBuilder.() -> Unit = {}
-        private set
-
-    var configureOutput: ProcessBuilder.() -> Unit = {}
-        private set
-
     var configureDirectory: ProcessBuilder.() -> Unit = {}
         private set
-
+    @Deprecated("dev", ReplaceWith(""))
     fun dir(dir: String) {
         configureDirectory = { withDir(dir) }
     }
 
-    fun dir(dir: File) {
+    fun dir(dir: File) = apply {
         configureDirectory = { withDir(dir) }
     }
 
@@ -52,8 +48,6 @@ abstract class ProcessConfiguration {
      */
     private fun ProcessBuilder.configure() = apply {
         withEnv(environment)
-        configureInput()
-        configureOutput()
         configureDirectory()
     }
 

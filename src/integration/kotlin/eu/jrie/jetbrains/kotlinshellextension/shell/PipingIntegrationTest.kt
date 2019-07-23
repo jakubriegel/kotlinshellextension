@@ -3,7 +3,6 @@ package eu.jrie.jetbrains.kotlinshellextension.shell
 import eu.jrie.jetbrains.kotlinshellextension.all
 import eu.jrie.jetbrains.kotlinshellextension.nullout
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import eu.jrie.jetbrains.kotlinshellextension.stdout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
@@ -228,7 +227,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             val script = systemProcess {
                 cmd = "./${scriptCode.name}"
-                dir(directory)
             }
 
             val resultBuilder = BytePacketBuilder()
@@ -252,7 +250,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -275,7 +272,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -305,7 +301,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -334,7 +329,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -357,7 +351,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -461,7 +454,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -486,7 +478,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 
@@ -511,7 +502,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess {
                 cmd {
                     cmd = "./${code.name}"
-                    dir(directory)
                 }
             }
 

@@ -106,7 +106,7 @@ class Pipeline private constructor (
 
     private fun addProcess(process: ProcessBuilder) = apply {
         processLine.add(
-            commander.process(
+            commander.createProcess(
                 process.withStdoutBuffer(buffer())
             ).also { commander.startProcess(it) }
         )

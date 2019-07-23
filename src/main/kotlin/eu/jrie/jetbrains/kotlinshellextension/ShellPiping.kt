@@ -27,7 +27,7 @@ abstract class ShellPiping (
         Pipeline(process, commander)
 
     /**
-     * Starts new [Pipeline] from this process process one specified by [process].
+     * Starts new [Pipeline] from this process one specified by [process].
      * Part of piping DSL
      *
      * @see ProcessBuilder.pipe
@@ -137,7 +137,7 @@ abstract class ShellPiping (
     infix fun String.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
-     * Adds [process] process to this pipeline.
+     * Adds [process] to this pipeline.
      * Part of piping DSL
      *
      * @return this [Pipeline]

@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package eu.jrie.jetbrains.kotlinshellextension
 
 import eu.jrie.jetbrains.kotlinshellextension.Shell.Companion.logger
@@ -11,43 +13,103 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import java.io.File
+
+typealias ShellScript = suspend Shell.() -> Unit
 
 @ExperimentalCoroutinesApi
-suspend fun shell(script: suspend Shell.() -> Unit) {
-    coroutineScope {
-        shell(this, script)
-    }
+suspend fun shell(
+    env: Map<String, String>? = null,
+    dir: File? = null,
+    script: ShellScript
+) = coroutineScope { shell(env, dir, this, script) }
+
+@ExperimentalCoroutinesApi
+suspend fun shell(
+    env: Map<String, String>? = null,
+    dir: File? = null,
+    scope: CoroutineScope,
+    script: ShellScript
+) {
+    scope.launch { shell(env, dir, ProcessCommander(scope), script) }
     logger.debug("shell end")
 }
 
 @ExperimentalCoroutinesApi
-suspend fun shell(scope: CoroutineScope, script: suspend Shell.() -> Unit) {
-    scope.launch {
-        val commander = ProcessCommander(this)
-        Shell(commander).script()
-        logger.debug("script end")
-    }
+suspend fun shell(
+    env: Map<String, String>? = null,
+    dir: File? = null,
+    commander: ProcessCommander,
+    script: ShellScript
+) {
+    Shell
+        .build(env, dir, commander)
+        .script()
+    logger.debug("script end")
 }
 
 @ExperimentalCoroutinesApi
-open class Shell constructor (
+open class Shell private constructor (
+    val environment: Map<String, String>,
+    val directory: File,
     val commander: ProcessCommander
 ) : ShellPiping(commander) {
-    fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration().apply(config).builder()
 
-    fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = process(
-        SystemProcessConfiguration().apply(config)
-    ).apply { start() }
+    fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration()
+        .apply(config)
+        .configureBuilder()
 
-    fun launchKtsProcess(config: KtsProcessConfiguration.() -> Unit) = process(KtsProcessConfiguration().apply(config))
+    fun ktsProcess(config: KtsProcessConfiguration.() -> Unit) = KtsProcessConfiguration()
+        .apply(config)
+        .configureBuilder()
+
+    private fun ProcessConfiguration.configureBuilder(): ProcessBuilder {
+        env(environment)
+        dir(directory)
+        return builder()
+    }
+
+    fun launchSystemProcess(config: SystemProcessConfiguration.() -> Unit) = launchProcess(systemProcess(config))
+
+    fun launchKtsProcess(config: KtsProcessConfiguration.() -> Unit) = launchProcess(ktsProcess(config))
+
+    private fun launchProcess(builder: ProcessBuilder) = process(builder).also { commander.startProcess(it) }
 
     fun process(config: ProcessConfiguration) = process(config.builder())
 
-    fun process(builder: ProcessBuilder) = commander.process(builder)
+    fun process(builder: ProcessBuilder) = commander.createProcess(builder)
 
     fun ps() = println(commander.status())
 
+    suspend fun env(env: Map<String, String>, script: ShellScript) {
+        Shell(
+            environment.plus(env),
+            directory,
+            commander
+        ).script()
+    }
+
+    suspend fun dir(dir: File, script: ShellScript) {
+        Shell(
+            environment,
+            dir,
+            commander
+        ).script()
+    }
+
     companion object {
+
+        fun build(env: Map<String, String>?, dir: File?, commander: ProcessCommander) = Shell(
+            env ?: emptyMap(),
+            dir ?: currentDir(),
+            commander
+        )
+
         internal val logger = LoggerFactory.getLogger(Shell::class.java)
+
+        private fun currentDir(): File {
+            val path = System.getProperty("user.dir")
+            return File(path)
+        }
     }
 }

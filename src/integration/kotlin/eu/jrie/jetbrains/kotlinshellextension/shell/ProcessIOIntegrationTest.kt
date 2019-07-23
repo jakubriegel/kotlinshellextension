@@ -1,6 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
 import kotlinx.io.core.ByteReadPacket
@@ -37,7 +36,6 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             launchSystemProcess {
                 cmd = "./${script.name}"
-                dir(directory)
             }
 
             commander.awaitAll()
@@ -53,7 +51,6 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             systemProcess {
                 cmd = "./${script.name}"
-                dir(directory)
             } pipe storeResult
 
             commander.awaitAll()
@@ -70,10 +67,9 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             val script = systemProcess {
                 cmd = "./${script.name}"
-                dir(directory)
             } forkErr { it pipe storeResult }
 
-            val process = commander.process(script)
+            val process = commander.createProcess(script)
             commander.startProcess(process)
 
             commander.awaitAll()
@@ -94,7 +90,6 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             val script = systemProcess {
                 cmd = "./${script.name}"
-                dir(directory)
             }
 
             (script forkErr { it pipe storeResult }) pipe storeStd
@@ -123,7 +118,6 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             val script = systemProcess {
                 cmd = "./$scriptName"
-                dir(directory)
             }
 
             (script forkErr  { it pipe storeResult }) pipe storeStd

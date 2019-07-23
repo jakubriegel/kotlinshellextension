@@ -37,7 +37,7 @@ class ProcessCommanderTest {
         val builder = spyk(SystemProcessBuilder(PROCESS_COMMAND))
 
         // when
-        val process = c.process(builder)
+        val process = c.createProcess(builder)
         process.closeOut()
 
         // then
@@ -58,8 +58,8 @@ class ProcessCommanderTest {
         val builder2 = spyk(SystemProcessBuilder(PROCESS_COMMAND))
 
         // when
-        val process1 = c.process(builder1)
-        val process2 = c.process(builder2)
+        val process1 = c.createProcess(builder1)
+        val process2 = c.createProcess(builder2)
         process1.closeOut()
         process2.closeOut()
 
@@ -100,7 +100,7 @@ class ProcessCommanderTest {
         val builderSpy = spyk<ProcessBuilder> {
             every { build() } returns processMock
         }
-        commander.process(builderSpy)
+        commander.createProcess(builderSpy)
 
         // when
         commander.startProcess(VIRTUAL_PID)
@@ -124,7 +124,7 @@ class ProcessCommanderTest {
         val builderSpy = spyk<ProcessBuilder> {
             every { build() } returns processMock
         }
-        c.process(builderSpy)
+        c.createProcess(builderSpy)
 
         // when
         c.awaitProcess(processMock, timeout)
@@ -147,7 +147,7 @@ class ProcessCommanderTest {
         val builderSpy = spyk<ProcessBuilder> {
             every { build() } returns processMock
         }
-        c.process(builderSpy)
+        c.createProcess(builderSpy)
 
         // when
         c.awaitProcess(VIRTUAL_PID, timeout)
@@ -212,8 +212,8 @@ class ProcessCommanderTest {
             every { build() } returns processMock2
         }
 
-        c.process(builder1)
-        c.process(builder2)
+        c.createProcess(builder1)
+        c.createProcess(builder2)
 
         // when
         c.awaitAll()
@@ -236,7 +236,7 @@ class ProcessCommanderTest {
         val builderSpy = spyk<ProcessBuilder> {
             every { build() } returns processMock
         }
-        c.process(builderSpy)
+        c.createProcess(builderSpy)
 
         // when
         c.killProcess(processMock)
@@ -257,7 +257,7 @@ class ProcessCommanderTest {
         val builderSpy = spyk<ProcessBuilder> {
             every { build() } returns processMock
         }
-        c.process(builderSpy)
+        c.createProcess(builderSpy)
 
         // when
         c.killProcess(VIRTUAL_PID)
@@ -315,8 +315,8 @@ class ProcessCommanderTest {
             every { build() } returns processMock2
         }
 
-        c.process(builder1)
-        c.process(builder2)
+        c.createProcess(builder1)
+        c.createProcess(builder2)
 
         // when
         c.killAll()

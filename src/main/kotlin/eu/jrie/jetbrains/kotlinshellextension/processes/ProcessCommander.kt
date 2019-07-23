@@ -7,13 +7,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
 
 @ExperimentalCoroutinesApi
-class ProcessCommander (
+class ProcessCommander internal constructor (
     val scope: CoroutineScope
 ) {
 
     private val processes = mutableSetOf<Process>()
 
-    fun process(builder: ProcessBuilder): Process {
+    fun createProcess(builder: ProcessBuilder): Process {
         return builder
             .withVirtualPID(virtualPID())
             .withScope(scope)

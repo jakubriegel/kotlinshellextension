@@ -1,7 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.nullout
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -26,7 +25,6 @@ class PSIntegrationTest : ProcessBaseIntegrationTest() {
             systemProcess { cmd = "ls" } pipe nullout
             val script = systemProcess {
                 cmd = "./${scriptCode.name}"
-                dir(directory)
             }
 
             (script forkErr nullout) pipe nullout

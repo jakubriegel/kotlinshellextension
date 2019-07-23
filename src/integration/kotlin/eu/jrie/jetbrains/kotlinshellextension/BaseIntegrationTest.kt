@@ -2,10 +2,8 @@ package eu.jrie.jetbrains.kotlinshellextension
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.TestOnly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -56,15 +54,15 @@ abstract class BaseIntegrationTest {
         it.mkdirs()
     }
 
-    protected fun <T> testBlocking(test: suspend () -> T) = runBlocking {
-        commander = ProcessCommander(this)
-        scope = commander.scope
-        withContext(Dispatchers.Default) { test() }
-    }
+//    protected fun <T> testBlocking(test: suspend () -> T) = runBlocking {
+//        commander = ProcessCommander(this)
+//        scope = commander.scope
+//        withContext(Dispatchers.Default) { test() }
+//    }
 
-    @TestOnly // TODO: remove after reviewing changes in Shell
+    @TestOnly
     protected fun shell(script: suspend Shell.() -> Unit) = runBlocking {
-        shell(this, script)
+        shell(null, directory, this, script)
     }
 
     companion object {

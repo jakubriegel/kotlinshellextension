@@ -2,7 +2,6 @@ package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -53,7 +52,6 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
                 cmd {
                     "ls" withArg "-l"
                 }
-                dir(directory)
             } pipe storeResult
 
             commander.awaitAll()
@@ -81,13 +79,11 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
                 cmd {
                     "chmod" withArgs listOf("+x", scriptName)
                 }
-                dir(directory)
             }
             commander.awaitProcess(chmod)
 
             val script = launchSystemProcess {
                 cmd = "./$scriptName"
-                dir(directory)
             }
 
             commander.awaitProcess(script)
@@ -110,13 +106,11 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
                 cmd {
                     "chmod" withArgs listOf("+x", scriptName)
                 }
-                dir(directory)
             }
             commander.awaitProcess(chmod)
 
             val script = launchSystemProcess {
                 cmd = "./$scriptName"
-                dir(directory)
             }
 
             commander.awaitProcess(script.vPID)
@@ -138,7 +132,6 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             shell {
                 val script = launchSystemProcess {
                     cmd = "./${scriptCode.name}"
-                    dir(directory)
                 }
 
                 beforeKill = script.pcb.state
@@ -167,7 +160,6 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             shell {
                 val script = launchSystemProcess {
                     cmd = "./${scriptCode.name}"
-                    dir(directory)
                 }
 
                 beforeKill = script.pcb.state
@@ -195,17 +187,14 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             shell {
                 val script1 = launchSystemProcess {
                     cmd = "./${scriptCode.name}"
-                    dir(directory)
                 }
 
                 val script2 = launchSystemProcess {
                     cmd = "./${scriptCode.name}"
-                    dir(directory)
                 }
 
                 val script3 = launchSystemProcess {
                     cmd = "./${scriptCode.name}"
-                    dir(directory)
                 }
 
                 commander.killAll()

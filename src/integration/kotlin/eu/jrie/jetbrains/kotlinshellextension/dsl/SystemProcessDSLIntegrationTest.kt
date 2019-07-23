@@ -3,7 +3,6 @@ package eu.jrie.jetbrains.kotlinshellextension.dsl
 import eu.jrie.jetbrains.kotlinshellextension.BaseIntegrationTest
 import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProcessConfiguration
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.jetbrains.annotations.TestOnly
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -112,7 +111,6 @@ class SystemProcessDSLIntegrationTest : BaseIntegrationTest() {
     fun `should create system process with given directory as File`() {
         // when
         val process = create {
-            dir(directory)
         }
 
         // then

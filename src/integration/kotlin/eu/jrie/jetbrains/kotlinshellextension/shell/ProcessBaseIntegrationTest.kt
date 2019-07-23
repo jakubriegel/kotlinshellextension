@@ -1,7 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.BaseIntegrationTest
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
 import kotlinx.io.core.ByteReadPacket
@@ -39,7 +38,6 @@ abstract class ProcessBaseIntegrationTest : BaseIntegrationTest() {
                 cmd {
                     "chmod" withArgs listOf("+x", file.name)
                 }
-                dir(directory)
             }
             commander.awaitProcess(chmod)
         }
