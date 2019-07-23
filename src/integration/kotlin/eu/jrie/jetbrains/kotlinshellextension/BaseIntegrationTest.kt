@@ -55,8 +55,12 @@ abstract class BaseIntegrationTest {
     }
 
     @TestOnly
-    protected fun shell(script: suspend Shell.() -> Unit) = runBlocking {
-        shell(null, directory, this, script)
+    protected fun shell(
+        env: Map<String, String>? = null,
+        dir: File? = directory,
+        script: ShellScript
+    ) = runBlocking {
+        shell(env, dir, this, script)
     }
 
     companion object {

@@ -75,33 +75,21 @@ open class Shell private constructor (
 
     private fun launchProcess(builder: ProcessBuilder) = process(builder).also { commander.startProcess(it) }
 
-    fun process(config: ProcessConfiguration) = process(config.builder())
-
-    fun process(builder: ProcessBuilder) = commander.createProcess(builder)
+    private fun process(builder: ProcessBuilder) = commander.createProcess(builder)
 
     fun ps() = println(commander.status())
 
-    suspend fun env(env: Map<String, String>, script: ShellScript) {
-        Shell(
-            environment.plus(env),
-            directory,
-            commander
-        ).script()
-    }
-
-    suspend fun dir(dir: File, script: ShellScript) {
-        Shell(
-            environment,
-            dir,
-            commander
-        ).script()
-    }
+    suspend fun shell(
+        env: Map<String, String> = emptyMap(),
+        dir: File = directory,
+        script: ShellScript
+    ) = shell(env, dir, commander, script)
 
     companion object {
 
         fun build(env: Map<String, String>?, dir: File?, commander: ProcessCommander) = Shell(
             env ?: emptyMap(),
-            dir ?: currentDir(),
+            assertDir(dir ?: currentDir()),
             commander
         )
 
@@ -111,5 +99,7 @@ open class Shell private constructor (
             val path = System.getProperty("user.dir")
             return File(path)
         }
+
+        private fun assertDir(dir: File) = dir.also { assert(it.isDirectory) }
     }
 }

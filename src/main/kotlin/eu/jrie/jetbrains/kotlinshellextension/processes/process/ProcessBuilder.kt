@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
-abstract class ProcessBuilder  {
+abstract class ProcessBuilder {
 
     protected var vPID: Int = -1
 
@@ -12,7 +12,6 @@ abstract class ProcessBuilder  {
         protected set
 
     protected val environment = mutableMapOf<String, String>()
-    fun environment() = environment.toMap()
 
     @ExperimentalCoroutinesApi
     var stdinBuffer: ProcessIOBuffer? = null
@@ -66,52 +65,14 @@ abstract class ProcessBuilder  {
     }
 
     /**
-     * Adds new variable to the environment.
-     * If the key was already present it overrides its value
-     *
-     * @return this builder
-     */
-    fun addEnv(env: Pair<String, String>) = apply {
-        environment[env.first] = env.second
-    }
-
-    /**
-     * Adds all given variables to the environment.
-     * If a key was already present it overrides its value
-     *
-     * @return this builder
-     */
-    fun addEnv(env: Map<String, String>) = apply {
-        environment.putAll(env)
-    }
-
-    /**
-     * Replaces current environment with given variable
-     *
-     * @return this builder
-     */
-    fun withEnv(env: Pair<String, String>) = apply {
-        environment.clear()
-        addEnv(env)
-    }
-
-    /**
      * Replaces current environment with given variables
      *
      * @return this builder
      */
-    fun withEnv(env: Map<String, String>) = apply {
+    internal fun withEnv(env: Map<String, String>) = apply {
         environment.clear()
-        addEnv(env)
+        environment.putAll(env)
     }
-
-    /**
-     * Sets execution directory
-     *
-     * @param path absolute path to desired directory
-     * @return this builder
-     */
-    fun withDir(path: String) = withDir(File(path))
 
     /**
      * Sets execution directory
@@ -119,7 +80,7 @@ abstract class ProcessBuilder  {
      * @param dir directory to execute the [Process] fromBuffer
      * @return this builder
      */
-    fun withDir(dir: File) = apply {
+    internal fun withDir(dir: File) = apply {
         if (!dir.isDirectory) throw Exception("Process must be executed fromBuffer directory")
         directory = dir
     }

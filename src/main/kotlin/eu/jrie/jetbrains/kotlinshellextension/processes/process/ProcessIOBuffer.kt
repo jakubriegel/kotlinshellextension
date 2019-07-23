@@ -6,7 +6,7 @@ import kotlinx.coroutines.channels.consumeEach
 import org.slf4j.LoggerFactory
 
 @ExperimentalCoroutinesApi
-class ProcessIOBuffer {
+class ProcessIOBuffer { // name? bufferedchannel
     private val channel: ProcessChannel = Channel(DEFAULT_CHANNEL_BUFFER_SIZE)
 
     internal suspend fun consumeFrom(input: ProcessReceiveChannel) {
