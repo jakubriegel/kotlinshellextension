@@ -513,6 +513,30 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
+    fun `should pipe long stream`() {
+        // given
+        val n = 1000
+        val file = scriptFile(n)
+        val pattern = "2"
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd = "./${file.name}"
+            }
+
+            val grep = systemProcess {
+                cmd { "grep" withArg pattern }
+            }
+
+            (script forkErr nullout) pipe grep pipe storeResult
+        }
+
+        // then
+        assertEquals(scriptStdOut(n).grep(pattern), readResult())
+    }
+
+    @Test
     fun `should make pipeline with non DSL api`() {
         // when
         shell {

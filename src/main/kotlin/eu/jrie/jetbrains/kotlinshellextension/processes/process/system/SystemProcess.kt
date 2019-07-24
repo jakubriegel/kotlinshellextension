@@ -9,22 +9,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.io.core.BytePacketBuilder
-import kotlinx.io.core.ByteReadPacket
-import kotlinx.io.core.readBytes
+import kotlinx.io.streams.inputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.listener.ProcessListener
 import org.zeroturnaround.exec.stream.LogOutputStream
 import java.io.File
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
@@ -130,33 +126,54 @@ class SystemProcess @TestOnly internal constructor (
         private val scope: CoroutineScope
     ) : InputStream() {
 
-        private val buffer = Channel<Byte>(UNLIMITED)
+        private val buffer = ByteBuffer.allocate(INPUT_STREAM_BUFFER_SIZE).apply { flip() }
 
-        init {
-            scope.launch { bufferData() }
-        }
+        private var stream: InputStream? = null
 
         override fun read(): Int {
-            return try {
-                runBlocking(scope.coroutineContext) { buffer.receive().toInt() }
+            if (!buffer.hasRemaining()) {
+                try {
+                    receive()
+                } catch (e: ClosedReceiveChannelException) {
+                    buffer.put(MINUS_ONE)
+                    buffer.flip()
+                }
             }
-            catch (e: ClosedReceiveChannelException) {
+
+            val b = buffer.get().toInt()
+            if (b == -1) {
                 close()
-                -1
+            }
+            return b
+        }
+
+        private fun receive() {
+            buffer.clear()
+            if (stream == null) {
+                val packet = runBlocking (scope.coroutineContext) { tap.receive() }
+                stream = packet.inputStream()
+            }
+            readStream()
+            buffer.flip()
+        }
+
+        private fun readStream() {
+            stream!!.let {
+                while (buffer.position() < INPUT_STREAM_BUFFER_SIZE) {
+                    val b = it.read().toByte()
+                    if (b == MINUS_ONE) break
+                    else buffer.put(b)
+                }
+                if (it.available() == 0) {
+                    stream = null
+                    it.close()
+                }
             }
         }
 
-        private suspend fun bufferData() {
-            tap.consumeEach { bufferData(it) }
-            buffer.close()
+        companion object {
+            private const val MINUS_ONE: Byte = -1
         }
-
-        private suspend fun bufferData(packet: ByteReadPacket) {
-            packet.readBytes().forEach {
-                buffer.send(it)
-            }
-        }
-
     }
 
     class SystemProcessListener (
@@ -188,4 +205,9 @@ class SystemProcess @TestOnly internal constructor (
     private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout, scope))
 
     private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr!!, scope))
+
+    companion object {
+        private const val INPUT_STREAM_BUFFER_SIZE = 512
+    }
+
 }

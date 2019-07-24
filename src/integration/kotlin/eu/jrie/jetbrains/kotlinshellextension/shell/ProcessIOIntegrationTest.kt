@@ -106,7 +106,7 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
     @Test
     fun `should consume long output`() {
         // given
-        val n = 100_000
+        val n = 10_000
         val scriptCode = scriptCode(n)
         val stdBuilder = BytePacketBuilder()
         val storeStd = { it: ByteReadPacket -> stdBuilder.writePacket(it) }

@@ -72,7 +72,7 @@ protected constructor (
             }
             stdoutBuffer != null && stderrBuffer == null -> {
                 launchIO { stdoutBuffer.consumeFrom(std) }
-                scope.launch { consumeAndPrint(err!!) }
+                launchIO { consumeAndPrint(err!!) }
             }
             stdoutBuffer == null && stderrBuffer != null -> {
                 launchIO { consumeAndPrint(std) }

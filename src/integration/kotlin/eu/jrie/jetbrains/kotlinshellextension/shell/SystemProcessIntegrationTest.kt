@@ -1,5 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
+import eu.jrie.jetbrains.kotlinshellextension.all
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -119,91 +120,111 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
     @Test
     fun `should kill running process`() {
+        // given
+        val n = 1_000
+        val scriptCode = scriptFile(n)
+
+        var beforeKill: ProcessState? = null
+        var afterKill: ProcessState? = null
+
         // when
         shell {
-            // given
-            val n = 1_000
-            val scriptCode = scriptFile(n)
-
-            var beforeKill: ProcessState? = null
-            var afterKill: ProcessState? = null
-
-            // when
-            shell {
-                val script = launchSystemProcess {
-                    cmd = "./${scriptCode.name}"
-                }
-
-                beforeKill = script.pcb.state
-                commander.killProcess(script)
-                afterKill = script.pcb.state
+            val script = launchSystemProcess {
+                cmd = "./${scriptCode.name}"
             }
 
-            // then
-            assertEquals(ProcessState.RUNNING, beforeKill)
-            assertEquals(ProcessState.TERMINATED, afterKill)
+            beforeKill = script.pcb.state
+            commander.killProcess(script)
+            afterKill = script.pcb.state
         }
+
+        // then
+        assertEquals(ProcessState.RUNNING, beforeKill)
+        assertEquals(ProcessState.TERMINATED, afterKill)
     }
 
     @Test
     fun `should kill running process by vPID`() {
+        // given
+        val n = 1_000
+        val scriptCode = scriptFile(n)
+
+        var beforeKill: ProcessState? = null
+        var afterKill: ProcessState? = null
+
         // when
         shell {
-            // given
-            val n = 1_000
-            val scriptCode = scriptFile(n)
-
-            var beforeKill: ProcessState? = null
-            var afterKill: ProcessState? = null
-
-            // when
-            shell {
-                val script = launchSystemProcess {
-                    cmd = "./${scriptCode.name}"
-                }
-
-                beforeKill = script.pcb.state
-                commander.killProcess(script.vPID)
-                afterKill = script.pcb.state
+            val script = launchSystemProcess {
+                cmd = "./${scriptCode.name}"
             }
 
-            // then
-            assertEquals(ProcessState.RUNNING, beforeKill)
-            assertEquals(ProcessState.TERMINATED, afterKill)
+            beforeKill = script.pcb.state
+            commander.killProcess(script.vPID)
+            afterKill = script.pcb.state
         }
+
+        // then
+        assertEquals(ProcessState.RUNNING, beforeKill)
+        assertEquals(ProcessState.TERMINATED, afterKill)
     }
 
     @Test
     fun `should kill all running processes`() {
+        // given
+        val n = 1_000
+        val scriptCode = scriptFile(n)
+
+        val states = mutableListOf<ProcessState>()
+
         // when
         shell {
-            // given
-            val n = 1_000
-            val scriptCode = scriptFile(n)
-
-            val states = mutableListOf<ProcessState>()
-
-            // when
-            shell {
-                val script1 = launchSystemProcess {
-                    cmd = "./${scriptCode.name}"
-                }
-
-                val script2 = launchSystemProcess {
-                    cmd = "./${scriptCode.name}"
-                }
-
-                val script3 = launchSystemProcess {
-                    cmd = "./${scriptCode.name}"
-                }
-
-                commander.killAll()
-                states.addAll(listOf(script1.pcb.state, script2.pcb.state, script3.pcb.state))
+            val script1 = launchSystemProcess {
+                cmd = "./${scriptCode.name}"
             }
 
-            // then
-            states.forEach { assertEquals(ProcessState.TERMINATED, it) }
+            val script2 = launchSystemProcess {
+                cmd = "./${scriptCode.name}"
+            }
+
+            val script3 = launchSystemProcess {
+                cmd = "./${scriptCode.name}"
+            }
+
+            commander.killAll()
+            states.addAll(listOf(script1.pcb.state, script2.pcb.state, script3.pcb.state))
         }
+
+        // then
+        states.forEach { assertEquals(ProcessState.TERMINATED, it) }
+    }
+
+    @Test
+    fun `should consume long line`() {
+        // given
+        val line = StringBuilder().let { b ->
+            repeat(1024) { b.append("a") }
+            b.toString()
+        }
+
+        val code = "echo $line"
+        val file = file(content = code)
+
+        // when
+        shell {
+            val chmod = launchSystemProcess {
+                cmd {
+                    "chmod" withArgs listOf("+x", file.name)
+                }
+            }
+            commander.awaitProcess(chmod)
+
+            val echo = systemProcess { cmd = "./${file.name}" }
+            val cat = systemProcess { cmd = "cat" }
+            echo pipe cat pipe storeResult await all
+        }
+
+        // then
+        assertEquals(line.plus('\n'), readResult())
     }
 
 }

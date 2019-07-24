@@ -11,7 +11,8 @@ import java.io.File
 abstract class ProcessBaseIntegrationTest : BaseIntegrationTest() {
     private lateinit var resultBuilder: BytePacketBuilder
 
-    protected val storeResult = { it: ByteReadPacket -> resultBuilder.writePacket(it) }
+    protected val storeResult = { it: ByteReadPacket ->
+        resultBuilder.writePacket(it) }
 
     @BeforeEach
     fun initResultBuilder() {
