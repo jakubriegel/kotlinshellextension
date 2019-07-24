@@ -65,6 +65,15 @@ abstract class ShellPiping (
     infix fun ProcessBuilder.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
 
     /**
+     * Writes process output to [stringBuilder].
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    infix fun ProcessBuilder.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
+
+    /**
      * Appends process output [file].
      * Part of piping DSL
      *
@@ -164,7 +173,7 @@ abstract class ShellPiping (
     infix fun Pipeline.pipe(file: File) = toFile(file)
 
     /**
-     * Ends this [Pipeline] by passing reasult to given [BytePacketBuilder]
+     * Ends this [Pipeline] by passing result to given [BytePacketBuilder]
      * Part of piping DSL
      *
      * @return this [Pipeline]
@@ -172,6 +181,17 @@ abstract class ShellPiping (
     @ExperimentalCoroutinesApi
     infix fun Pipeline.pipe(packetBuilder: BytePacketBuilder) = toLambda {
         packetBuilder.writePacket(it)
+    }
+
+    /**
+     * Ends this [Pipeline] by passing result to given [StringBuilder]
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    infix fun Pipeline.pipe(stringBuilder: StringBuilder) = toLambda {
+        stringBuilder.append(it.readText())
     }
 
     /**

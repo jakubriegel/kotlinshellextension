@@ -216,7 +216,7 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     }
 
     @Test
-    fun `should pipe to PacketBuilder`() {
+    fun `should pipe to BytePacketBuilder`() {
         // given
         val n = 5
         val scriptCode = scriptFile(n)
@@ -233,6 +233,30 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
 
             script forkErr nullout pipe resultBuilder await all
             result = resultBuilder.readString()
+        }
+
+        // then
+        assertEquals(scriptStdOut(n), result)
+    }
+
+    @Test
+    fun `should pipe to StringBuilder`() {
+        // given
+        val n = 5
+        val scriptCode = scriptFile(n)
+
+        var result: String? = null
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd = "./${scriptCode.name}"
+            }
+
+            val resultBuilder = StringBuilder()
+
+            script forkErr nullout pipe resultBuilder await all
+            result = resultBuilder.toString()
         }
 
         // then
