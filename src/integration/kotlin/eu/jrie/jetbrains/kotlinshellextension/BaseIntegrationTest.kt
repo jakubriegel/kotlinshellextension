@@ -1,6 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.shell.ShellScript
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -60,7 +61,7 @@ abstract class BaseIntegrationTest {
         dir: File? = directory,
         script: ShellScript
     ) = runBlocking {
-        shell(env, dir, this, script)
+        eu.jrie.jetbrains.kotlinshellextension.shell.shell(env, dir, this, script)
     }
 
     companion object {

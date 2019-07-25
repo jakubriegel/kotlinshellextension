@@ -1,11 +1,11 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.pipeline
 
-import eu.jrie.jetbrains.kotlinshellextension.ShellPiping
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
+import eu.jrie.jetbrains.kotlinshellextension.shell.ShellPiping
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

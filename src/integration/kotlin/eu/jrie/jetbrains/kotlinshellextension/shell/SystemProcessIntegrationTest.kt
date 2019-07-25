@@ -1,6 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
-import eu.jrie.jetbrains.kotlinshellextension.all
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,9 +1,8 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
-import eu.jrie.jetbrains.kotlinshellextension.all
-import eu.jrie.jetbrains.kotlinshellextension.nullout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -145,6 +144,112 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
 
         // then
         assertEquals("$newValue\n", readResult())
+    }
+
+    @Test
+    fun `should create sub shell with inherited environment`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+        val env = mapOf(variable to value)
+
+        val code = "echo \$$variable"
+        val file = file(content = code)
+
+        // when
+        shell (
+            env = env
+        ) {
+
+            systemProcess {
+                cmd {
+                    "chmod" withArgs listOf("+x", file.name)
+                }
+            } pipe nullout await all
+
+            shell {
+                systemProcess { cmd = "./${file.name}" } pipe storeResult
+            }
+        }
+
+        // then
+        assertEquals("$value\n", readResult())
+    }
+
+    @Test
+    fun `should create sub shell with empty variables`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+
+        var empty: Boolean? = null
+
+        // when
+        shell {
+            variable(variable to value)
+            shell {
+                empty = variables.isEmpty()
+            }
+        }
+
+        // then
+        assertTrue(empty!!)
+    }
+
+    @Test
+    fun `should add environment variable`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+
+        val code = "echo \$$variable"
+        val file = file(content = code)
+
+        // when
+        shell {
+
+            export(variable to value)
+
+            systemProcess {
+                cmd {
+                    "chmod" withArgs listOf("+x", file.name)
+                }
+            } pipe nullout await all
+
+            shell {
+                systemProcess { cmd = "./${file.name}" } pipe storeResult
+            }
+        }
+
+        // then
+        assertEquals("$value\n", readResult())
+    }
+
+    @Test
+    fun `should add shell variable`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+
+        val code = "echo \$$variable"
+        val file = file(content = code)
+
+        // when
+        shell {
+
+            variable(variable to value)
+
+            systemProcess {
+                cmd {
+                    "chmod" withArgs listOf("+x", file.name)
+                }
+            } pipe nullout await all
+
+            systemProcess { cmd = "./${file.name}" } pipe storeResult
+        }
+
+        // then
+        assertEquals("$value\n", readResult())
     }
 
     @Test

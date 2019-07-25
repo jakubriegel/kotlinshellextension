@@ -1,6 +1,5 @@
-package eu.jrie.jetbrains.kotlinshellextension
+package eu.jrie.jetbrains.kotlinshellextension.shell
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
@@ -12,9 +11,7 @@ import java.io.File
 typealias PipelineFork = (@Suppress("EXPERIMENTAL_API_USAGE") ProcessIOBuffer) -> Unit
 
 @ExperimentalCoroutinesApi
-abstract class ShellPiping (
-    private val commander: ProcessCommander
-) {
+interface ShellPiping : ShellBase {
     /**
      * Starts new [Pipeline] from process specified by given [ProcessBuilder].
      * Shall be wrapped with piping DSL
@@ -237,7 +234,7 @@ abstract class ShellPiping (
  */
 object All
 /**
- * Alias to be used in piping DSL with [Shell.await]
+ * Alias to be used in piping DSL with [Shella.await]
  *
  * Ex: `p1 pipe p2 await all`
  *
