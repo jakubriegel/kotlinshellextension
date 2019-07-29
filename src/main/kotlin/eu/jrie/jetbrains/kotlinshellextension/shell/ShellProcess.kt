@@ -6,6 +6,8 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.configuration.SystemProc
 import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutable
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -13,9 +15,27 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 interface ShellProcess : ShellBase {
 
     /**
+     * All processes
+     */
+    val processes: List<Process>
+        get() = commander.processes.toList()
+    /**
+     * List of detached processes
+     */
+    val detached: List<Process>
+
+    /**
+     * List of daemon processes
+     */
+    val daemons: List<Process>
+
+    val nullin: ProcessReceiveChannel
+    val nullout: ProcessSendChannel
+
+    /**
      * Creates executable system process
      */
-    fun systemProcess(config: SystemProcessConfiguration.() -> Unit)/*: ProcessExec*/ = process(systemBuilder(config))
+    fun systemProcess(config: SystemProcessConfiguration.() -> Unit) = process(systemBuilder(config))
 
     /**
      * Creates builder for system process
@@ -37,7 +57,7 @@ interface ShellProcess : ShellBase {
     /**
      * Executes system process from this command line
      */
-    suspend operator fun String.invoke() = process().invoke()
+    suspend operator fun String.invoke(mode: ExecutionMode = ExecutionMode.ATTACHED) = process().invoke(mode)
 
     /**
      * Creates executable KotlinScript process
@@ -66,6 +86,8 @@ interface ShellProcess : ShellBase {
 
     suspend fun detach(executable: ProcessExecutable)
 
+    suspend fun detach(vararg executable: ProcessExecutable) = executable.forEach { detach(it) }
+
     suspend fun joinDetached()
 
     val jobs: ShellExecutable get() = exec {
@@ -75,26 +97,38 @@ interface ShellProcess : ShellBase {
         }
     }
 
-    val detached: List<Process>
-
     suspend fun fg(index: Int = 1) = fg(detached[index-1])
 
     suspend fun fg(process: Process)
 
+    suspend fun daemon(executable: ProcessExecutable)
+
+    suspend fun daemon(vararg executable: ProcessExecutable) = executable.forEach { daemon(it) }
+
+    suspend fun Process.await() = commander.awaitProcess(this)
+
     suspend fun awaitAll() = commander.awaitAll()
 
+    suspend fun Process.kill() = kill(this)
+
+    suspend fun kill(vararg process: Process) = process.forEach { killProcess(it) }
+
+    private suspend fun killProcess(process: Process) = commander.killProcess(process)
+
     suspend fun killAll() = commander.killAll()
+
+    suspend operator fun ProcessExecutable.invoke(mode: ExecutionMode = ExecutionMode.ATTACHED) {
+        when (mode) {
+            ExecutionMode.ATTACHED -> this()
+            ExecutionMode.DETACHED -> this@ShellProcess.detach(this)
+            ExecutionMode.DAEMON -> this@ShellProcess.daemon(this)
+        }
+    }
 
     /**
      * Retrieves all process data
      */
     val ps: ShellExecutable get() = exec { commander.status() }
-
-    /**
-     * Retrieves all processes
-     */
-    val processes: List<Process>
-        get() = commander.processes.toList()
 
     /**
      * Retrieves [Process] by its vPID
@@ -109,6 +143,26 @@ interface ShellProcess : ShellBase {
     /**
      * Retrieves all terminated processes
      */
-    fun List<Process>.terminated() = first { it.pcb.state == ProcessState.TERMINATED }
+    fun List<Process>.terminated() = filter { it.pcb.state == ProcessState.TERMINATED }
 
+}
+
+enum class ExecutionMode {
+    /**
+     * Runs process in foreground.
+     * Will close the process when closing shell
+     */
+    ATTACHED,
+
+    /**
+     * Runs process in the background.
+     * Will close the process when closing shell
+     */
+    DETACHED,
+
+    /**
+     * Runs process in the background.
+     * Will **not** close the process when closing shell
+     */
+    DAEMON
 }

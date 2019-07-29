@@ -53,18 +53,18 @@ protected constructor (
         }
         else {
             pcb.state = ProcessState.RUNNING
-            execute().join()
-            finalize()
-            logger.debug("executed $name")
+            execute()
             pcb
         }
     }
 
-    protected abstract suspend fun execute(): Job
+    protected abstract suspend fun execute()
 
-    abstract fun isAlive(): Boolean
+    fun isAlive() = pcb.state == ProcessState.RUNNING || isRunning()
 
-    internal suspend fun await(timeout: Long = 0) {
+    abstract fun isRunning(): Boolean
+
+    internal suspend fun await(timeout: Long) {
         if (isAlive()) {
             expect(timeout)
             finalize()

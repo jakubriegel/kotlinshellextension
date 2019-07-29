@@ -153,11 +153,11 @@ class ProcessCommanderTest {
         // given
         val c = ProcessCommander(this)
         val processMock1 = mockk<Process> {
-            coEvery { await() } just runs
+            coEvery { await(0) } just runs
             every { name } returns PROCESS_NAME
         }
         val processMock2 = mockk<Process> {
-            coEvery { await() } just runs
+            coEvery { await(0) } just runs
             every { name } returns PROCESS_NAME
         }
 
@@ -176,8 +176,8 @@ class ProcessCommanderTest {
 
         // then
         coVerify (exactly = 1) {
-            processMock1.await()
-            processMock2.await()
+            processMock1.await(0)
+            processMock2.await(0)
         }
     }
 

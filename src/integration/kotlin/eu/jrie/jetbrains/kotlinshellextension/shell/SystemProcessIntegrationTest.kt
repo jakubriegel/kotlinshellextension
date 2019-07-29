@@ -4,6 +4,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertIterableEquals
 import org.junit.jupiter.api.Test
 
 @ExperimentalCoroutinesApi
@@ -82,9 +83,6 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
     @Test
     fun `should detach process`() {
         // given
-
-        //p1 pipe p2
-
         val file = scriptFile(500)
         var stateAfterCall: ProcessState? = null
 
@@ -98,6 +96,41 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
         // then
         assertEquals(ProcessState.RUNNING, stateAfterCall)
+    }
+
+    @Test
+    fun `should detach process with extension function`() {
+        // given
+        val file = scriptFile(500)
+        var stateAfterCall: ProcessState? = null
+
+        // when
+        shell {
+            "./${file.name}"(ExecutionMode.DETACHED)
+            delay(50)
+            stateAfterCall = processes.first().pcb.state
+        }
+
+        // then
+        assertEquals(ProcessState.RUNNING, stateAfterCall)
+    }
+
+    @Test
+    fun `should list detached processes`() {
+        // given
+        val file = scriptFile(5)
+
+        // when
+        shell {
+            val p1 = "./${file.name}".process()
+            val p2 = "./${file.name}".process()
+            val p3 = "./${file.name}".process()
+            detach(p1, p2, p3)
+
+            // then
+            assertIterableEquals(listOf(p1.process, p2.process, p3.process), detached)
+            // TODO: check "jobs()"
+        }
     }
 
     @Test
@@ -119,56 +152,101 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
         assertEquals(ProcessState.TERMINATED, stateAfterAttach)
     }
 
-//    @Test
-//    fun `should kill running process`() {
-//        // given
-//        val n = 1_000
-//        val scriptCode = scriptFile(n)
-//
-//        var beforeKill: ProcessState? = null
-//        var afterKill: ProcessState? = null
-//
-//        // when
-//        shell {
-//            val script = launchSystemProcess {
-//                cmd = "./${scriptCode.name}"
-//            }
-//
-//            beforeKill = script.pcb.state
-//            commander.killProcess(script)
-//            afterKill = script.pcb.state
-//        }
-//
-//        // then
-//        assertEquals(ProcessState.RUNNING, beforeKill)
-//        assertEquals(ProcessState.TERMINATED, afterKill)
-//    }
-//
-//    @Test
-//    fun `should kill running process by vPID`() {
-//        // given
-//        val n = 1_000
-//        val scriptCode = scriptFile(n)
-//
-//        var beforeKill: ProcessState? = null
-//        var afterKill: ProcessState? = null
-//
-//        // when
-//        shell {
-//            val script = launchSystemProcess {
-//                cmd = "./${scriptCode.name}"
-//            }
-//
-//            beforeKill = script.pcb.state
-//            commander.killProcess(script.vPID)
-//            afterKill = script.pcb.state
-//        }
-//
-//        // then
-//        assertEquals(ProcessState.RUNNING, beforeKill)
-//        assertEquals(ProcessState.TERMINATED, afterKill)
-//    }
+    @Test
+    fun `should crate a daemon process`() {
+        // given
+        val file = scriptFile(500)
+        var stateAfterCall: ProcessState? = null
 
+        // when
+        shell {
+            val script = systemProcess { cmd = "./${file.name}" }
+            daemon(script)
+            delay(50)
+            stateAfterCall = processes.first().pcb.state
+        }
+
+        // then
+        assertEquals(ProcessState.RUNNING, stateAfterCall)
+    }
+
+    @Test
+    fun `should crate a daemon process with extension function`() {
+        // given
+        val file = scriptFile(500)
+        var stateAfterCall: ProcessState? = null
+
+        // when
+        shell {
+            "./${file.name}"(ExecutionMode.DAEMON)
+            delay(50)
+            stateAfterCall = processes.first().pcb.state
+        }
+
+        // then
+        assertEquals(ProcessState.RUNNING, stateAfterCall)
+    }
+
+    @Test
+    fun `should list daemon processes`() {
+        // given
+        val file = scriptFile(5)
+
+        // when
+        shell {
+            val p1 = "./${file.name}".process()
+            val p2 = "./${file.name}".process()
+            val p3 = "./${file.name}".process()
+            daemon(p1, p2, p3)
+            delay(100)
+
+            // then
+            assertIterableEquals(listOf(p1.process, p2.process, p3.process), daemons)
+        }
+    }
+
+    @Test
+    fun `should await running process`() {
+        // given
+        val file = scriptFile(250)
+        var stateAfterAttach: ProcessState? = null
+
+        // when
+        shell {
+            val script = systemProcess { cmd = "./${file.name}" }
+            detach(script)
+            delay(50)
+            script.process.await()
+            stateAfterAttach = processes.first().pcb.state
+        }
+
+        // then
+        assertEquals(ProcessState.TERMINATED, stateAfterAttach)
+    }
+
+    @Test
+    fun `should kill running process`() {
+        // given
+        val n = 1_000
+        val scriptCode = scriptFile(n)
+
+        var beforeKill: ProcessState? = null
+        var afterKill: ProcessState? = null
+
+        // when
+        shell {
+            val script = systemProcess { cmd = "./${scriptCode.name}" }
+            detach(script)
+
+            beforeKill = script.process.pcb.state
+            script.process.kill()
+            afterKill =script.process.pcb.state
+        }
+
+        // then
+        assertEquals(ProcessState.RUNNING, beforeKill)
+        assertEquals(ProcessState.TERMINATED, afterKill)
+    }
 
     @Test
     fun `should await all running processes`() {

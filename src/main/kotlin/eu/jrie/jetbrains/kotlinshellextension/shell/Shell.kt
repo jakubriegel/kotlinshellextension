@@ -25,8 +25,8 @@ open class Shell private constructor (
     final override val commander: ProcessCommander
 ) : ShellPiping, ShellProcess, ShellManagement {
 
-    val nullin: ProcessReceiveChannel = Channel<ProcessChannelUnit>().apply { close() }
-    val nullout: ProcessSendChannel = NullSendChannel()
+    final override val nullin: ProcessReceiveChannel = Channel<ProcessChannelUnit>().apply { close() }
+    final override val nullout: ProcessSendChannel = NullSendChannel()
 
     final override val stdin: ProcessReceiveChannel = nullin
     final override val stdout: ProcessSendChannel
@@ -41,7 +41,15 @@ open class Shell private constructor (
     override var directory: File = directory
         protected set
 
+    override val detached: List<Process>
+        get() = detachedJobs.map { it.first }
+
     private val detachedJobs = mutableListOf<Pair<Process, Job>>()
+
+    override val daemons: List<Process>
+        get() = daemonsExecs.map { it.process }
+
+    private val daemonsExecs = mutableListOf<ProcessExecutable>()
 
     init {
         val systemOutChannel: ProcessChannel = Channel()
@@ -73,13 +81,10 @@ open class Shell private constructor (
 
     override suspend fun detach(executable: ProcessExecutable) {
         executable.init()
-        println("INIT ${executable.process.vPID}")
-        val job = commander.scope.launch { executable.exec() }
+        executable.exec()
+        val job = commander.scope.launch { executable.await() }
         detachedJobs.add(executable.process to job)
     }
-
-    override val detached: List<Process>
-        get() = detachedJobs.map { it.first }
 
     override suspend fun joinDetached() = detachedJobs.forEach { it.second.join() }
 
@@ -89,6 +94,13 @@ open class Shell private constructor (
                 commander.awaitProcess(first)
                 second.join()
             }
+    }
+
+    override suspend fun daemon(executable: ProcessExecutable) {
+        executable.init()
+        executable.exec()
+        daemonsExecs.add(executable)
+        logger.debug("started daemon ${executable.process}")
     }
 
     override suspend fun finalize() {

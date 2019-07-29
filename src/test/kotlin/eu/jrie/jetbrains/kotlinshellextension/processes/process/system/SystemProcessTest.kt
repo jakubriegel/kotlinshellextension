@@ -42,7 +42,7 @@ class SystemProcessTest {
         // then
         verify (exactly = 1) {
             executorMock.command(listOf(PROCESS_COMMAND).plus(PROCESS_ARGS))
-            executorMock.destroyOnExit()
+//TODO: remove            executorMock.destroyOnExit()
             executorMock.addListener(ofType(SystemProcess.SystemProcessListener::class))
             executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class))
             executorMock.environment(ENVIRONMENT)
@@ -51,7 +51,7 @@ class SystemProcessTest {
     }
 
     @Test
-    fun `should start and execute process`() {
+    fun `should start the process`() {
         // given
         val futureMock = mockk<Future<ProcessResult>> {
             every { get() } returns mockk {
@@ -76,7 +76,7 @@ class SystemProcessTest {
 
         // then
         verify (exactly = 1) { executorMock.start() }
-        assertEquals(ProcessState.TERMINATED, process.pcb.state)
+        assertEquals(ProcessState.RUNNING, process.pcb.state)
     }
 
     @Test
@@ -139,7 +139,7 @@ class SystemProcessTest {
             }
 
             process.closeOut()
-            process.await()
+            process.await(0)
         }
 
         // then
@@ -189,7 +189,7 @@ class SystemProcessTest {
                 every { future } returns futureMock
             }
 
-            process.await()
+            process.await(0)
         }
 
         // then

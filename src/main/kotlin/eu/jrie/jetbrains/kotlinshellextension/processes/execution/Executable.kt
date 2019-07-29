@@ -11,12 +11,15 @@ abstract class Executable (
 
     internal abstract suspend fun exec()
 
+    internal open suspend fun await() = Unit
+
     suspend operator fun invoke() = invoke(context)
 
     suspend operator fun invoke(context: ExecutionContext) {
         this.context = context
         init()
         exec()
+        await()
     }
 }
 
@@ -26,7 +29,7 @@ class ProcessExecutable (
     private val builder: ProcessBuilder
 ) : Executable(context) {
 
-    internal lateinit var process: Process
+    lateinit var process: Process
 
     override fun init() = with(context as ProcessExecutionContext) {
         builder
@@ -38,5 +41,9 @@ class ProcessExecutable (
 
     override suspend fun exec() = with(context as ProcessExecutionContext) {
         commander.startProcess(process)
+    }
+
+    override suspend fun await()  = with(context as ProcessExecutionContext) {
+        commander.awaitProcess(process)
     }
 }

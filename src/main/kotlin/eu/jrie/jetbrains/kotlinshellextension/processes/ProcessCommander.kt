@@ -23,6 +23,7 @@ class ProcessCommander internal constructor (
 
     internal suspend fun startProcess(process: Process) {
         process.start()
+        logger.debug("started $process")
     }
 
     internal suspend fun awaitProcess(process: Process, timeout: Long = 0) {

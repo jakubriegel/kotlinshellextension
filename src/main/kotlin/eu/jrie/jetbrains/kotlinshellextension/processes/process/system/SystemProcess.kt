@@ -61,7 +61,7 @@ class SystemProcess @TestOnly internal constructor (
     init {
         executor
             .command(listOf(command).plus(arguments))
-            .destroyOnExit()
+//            .destroyOnExit()
             .addListener(SystemProcessListener(this))
             .redirectInput()
             .redirectOutput()
@@ -70,29 +70,23 @@ class SystemProcess @TestOnly internal constructor (
     }
 
     @ObsoleteCoroutinesApi
-    override suspend fun execute() = scope.launch(
-        newSingleThreadContext("${this}_execution_thread")
-    ) {
-        go()
-        expect(0)
-    }
-
-    private fun go() {
+    override suspend fun execute() = wrapThread("${this}_execution_thread") {
         val started = executor.start()!!
         pcb.startTime = started.process.info().startInstant().orElse(Instant.now())
         pcb.systemPID = started.process.pid()
         pcb.startedProcess = started
-    }
+    } .join()
 
-    override fun isAlive() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
-
-    override suspend fun expect(timeout: Long) {
+    @ObsoleteCoroutinesApi
+    override suspend fun expect(timeout: Long) = wrapThread("${this}_expect_thread") {
         with(pcb.startedProcess!!) {
             val result = if (timeout.compareTo(0) == 0) future.get()
             else future.get(timeout, TimeUnit.MILLISECONDS)
             pcb.exitCode = result.exitValue
         }
-    }
+    } .join()
+
+    override fun isRunning() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
 
     override fun destroy() {
         if(isAlive()) {
@@ -199,6 +193,9 @@ class SystemProcess @TestOnly internal constructor (
     private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout, scope))
 
     private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr, scope))
+
+    @ObsoleteCoroutinesApi
+    private fun wrapThread(name: String, block: () -> Unit) = scope.launch(newSingleThreadContext(name)) { block() }
 
     companion object {
         private const val INPUT_STREAM_BUFFER_SIZE = 512
