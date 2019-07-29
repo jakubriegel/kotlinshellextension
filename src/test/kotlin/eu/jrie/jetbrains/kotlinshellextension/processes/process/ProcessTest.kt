@@ -6,10 +6,12 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.io.File
@@ -17,29 +19,28 @@ import java.io.File
 @ExperimentalCoroutinesApi
 class ProcessTest {
 
-    private lateinit var process: Process// = spyk<SampleProcess>()
+    private lateinit var process: Process
 
     @Test
-    fun `should start process`() {
+    fun `should start and execute process`() {
         // when
         runTest { process.start() }
 
         // then
-        assertEquals(process.pcb.state, ProcessState.RUNNING)
+        assertEquals(process.pcb.state, ProcessState.TERMINATED)
     }
 
     @ParameterizedTest(name = "{index} {0} should throw exception when tried to start not READY process")
     @EnumSource(ProcessState::class)
-    fun `should throw exception when tried to start not READY process`(state: ProcessState) {
-        runTest {
-            // given
-            process.pcb.state = state
+    fun `should throw exception when tried to start not READY process`(state: ProcessState) = runTest {
+        // given
+        process.pcb.state = state
 
-            // when
-            if (state != ProcessState.READY) {
-                // then
-                assertThrows<Exception> { process.start() }
-            }
+        // when
+        if (state != ProcessState.READY) {
+            // expect
+            val e  = runCatching { process.start() }
+            assertEquals(Exception::class, e.exceptionOrNull()!!::class)
         }
     }
 
@@ -70,28 +71,40 @@ class ProcessTest {
         assertEquals(ProcessState.TERMINATED, process.pcb.state)
     }
 
-    private fun runTest(test: suspend ProcessTest.() -> Unit) = runBlocking {
-        process = spyk(SampleProcess(this))
-        test()
-        process.closeOut()
+    @Test
+    fun `should get process name`() {
+        // when
+        runTest { /* initialize the process */ }
+        val name = process.name
+        val string = process.toString()
+
+        // then
+        // TODO: assertEquals(name, string())
     }
 
-    private open class SampleProcess (
+    private fun <T> runTest(test: suspend ProcessTest.() -> T): T = runBlocking {
+        process = spyk(SampleProcess(this))
+        val result = test()
+        process.closeOut()
+        result
+    }
+
+    private class SampleProcess (
         scope: CoroutineScope
     ) : Process(
         VIRTUAL_PID,
         ENVIRONMENT,
         File(""),
-        null,
-        null,
-        null,
+        Channel(),
+        Channel(),
+        Channel(),
         scope
     ) {
         override val pcb: PCB = spyk()
         override val statusCmd = ""
         override val statusOther = ""
 
-        override fun execute(): PCB = spyk()
+        override suspend fun execute() = scope.launch { delay(1) }
         override fun isAlive(): Boolean = false
         override suspend fun expect(timeout: Long) {}
         override fun destroy() {}

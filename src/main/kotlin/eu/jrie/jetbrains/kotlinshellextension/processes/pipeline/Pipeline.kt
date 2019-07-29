@@ -3,8 +3,9 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.ShellPiping
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,7 @@ class Pipeline private constructor (
 
     private val processLine = mutableListOf<Process>()
 
-    private lateinit var lastBuffer: ProcessIOBuffer
+    private lateinit var lastOut: ProcessReceiveChannel
 
     private val asyncJobs = mutableListOf<Job>()
 
@@ -71,9 +72,7 @@ class Pipeline private constructor (
     internal constructor(string: String, commander: ProcessCommander) : this(string.byteInputStream(), commander)
 
     private constructor(stream: InputStream, commander: ProcessCommander) : this(commander) {
-        val buffer = buffer()
-        val channel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
-        launch { buffer.consumeFrom(channel) }
+        val channel = channel()
         launch {
             stream.use {
                 while (it.available() > 0) {
@@ -85,14 +84,14 @@ class Pipeline private constructor (
         }
     }
 
-    /**
-     * Starts new [Pipeline] with given [buffer] as start
-     *
-     * @see ShellPiping
-     */
-    internal constructor(buffer: ProcessIOBuffer, commander: ProcessCommander) : this(commander) {
-        lastBuffer = buffer
-    }
+//    /**
+//     * Starts new [Pipeline] with given [buffer] as start
+//     *
+//     * @see ShellPiping
+//     */
+//    internal constructor(buffer: ProcessIOBuffer, commander: ProcessCommander) : this(commander) {
+//        lastBuffer = buffer
+//    }
 
     /**
      * Adds [process] to this [Pipeline]
@@ -101,14 +100,14 @@ class Pipeline private constructor (
      * @return this [Pipeline]
      */
     fun toProcess(process: ProcessBuilder) = apply {
-        addProcess(process.withStdinBuffer(lastBuffer))
+        addProcess(process.withStdin(lastOut))
     }
 
     private fun addProcess(process: ProcessBuilder) = apply {
         processLine.add(
             commander.createProcess(
-                process.withStdoutBuffer(buffer())
-            ).also { commander.startProcess(it) }
+                process.withStdout(channel())
+            )//.also { commander.startProcess(it) }
         )
     }
 
@@ -119,9 +118,7 @@ class Pipeline private constructor (
      * @return this [Pipeline]
      */
     fun toLambda(lambda: PipelineLambda) = apply {
-        val lambdaChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
-        launch { lastBuffer.receiveTo(lambdaChannel) }
-        launch { lambdaChannel.consumeEach(lambda) }
+        launch { lastOut.consumeEach(lambda) }
     }
 
     /**
@@ -141,17 +138,15 @@ class Pipeline private constructor (
     fun appendFile(file: File) = apply { writeFile(file, true) }
 
     private fun writeFile(file: File, append: Boolean) {
-        val fileWriteChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
         launchIO {
             FileOutputStream(file, append).use {
-                fileWriteChannel.consumeEach { p ->
+                lastOut.consumeEach { p ->
                     it.writePacket(p)
                     it.flush()
                 }
                 it.close()
             }
         }
-        launch { lastBuffer.receiveTo(fileWriteChannel) }
     }
 
     /**
@@ -176,10 +171,15 @@ class Pipeline private constructor (
         asyncJobs.forEach { it.join() }
     }
 
+//    /**
+//     * Returns new [ProcessIOBuffer] and sets it as [lastBuffer]
+//     */
+//    private fun buffer() = ProcessIOBuffer().also { lastBuffer = it }
+
     /**
-     * Returns new [ProcessIOBuffer] and sets it as [lastBuffer]
+     * Returns new [ProcessSendChannel] and sets it as [lastOut]
      */
-    private fun buffer() = ProcessIOBuffer().also { lastBuffer = it }
+    private fun channel(): ProcessSendChannel = Channel<ProcessChannelUnit>().also { lastOut }
 
     private fun launchIO(ioBlock: suspend CoroutineScope.() -> Unit) = launch {
         withContext(Dispatchers.IO, ioBlock)

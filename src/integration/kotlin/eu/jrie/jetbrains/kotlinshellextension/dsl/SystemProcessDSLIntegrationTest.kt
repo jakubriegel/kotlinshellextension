@@ -54,7 +54,7 @@ class SystemProcessDSLIntegrationTest : BaseIntegrationTest() {
     private fun create(config: SystemProcessConfiguration.() -> Unit): SystemProcessBuilder {
         var processBuilder: SystemProcessBuilder? = null
         shell {
-            processBuilder = systemProcess(config) as SystemProcessBuilder
+            processBuilder = systemBuilder(config) as SystemProcessBuilder
         }
         return processBuilder ?: throw NullPointerException("process builder did not initialized correctly")
     }

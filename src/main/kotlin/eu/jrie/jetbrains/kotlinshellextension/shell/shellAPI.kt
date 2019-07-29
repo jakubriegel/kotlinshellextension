@@ -37,6 +37,7 @@ suspend fun shell(
     script: ShellScript
 ) {
     Shell.build(env, dir, commander)
-        .script()
+        .apply { script() }
+        .finalize()
     Shell.logger.debug("script end")
 }

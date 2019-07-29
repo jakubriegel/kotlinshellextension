@@ -1,50 +1,36 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutable
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.NullSendChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
+import kotlinx.io.streams.writePacket
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-
-@ExperimentalCoroutinesApi
-suspend fun shell(
-    env: Map<String, String>? = null,
-    dir: File? = null,
-    script: ShellScript
-) = coroutineScope { shell(env, dir, this, script) }
-
-@ExperimentalCoroutinesApi
-suspend fun shell(
-    env: Map<String, String>? = null,
-    dir: File? = null,
-    scope: CoroutineScope,
-    script: ShellScript
-) {
-    scope.launch { shell(env, dir, ProcessCommander(scope), script) }
-    logger.debug("shell end")
-}
-
-@ExperimentalCoroutinesApi
-suspend fun shell(
-    env: Map<String, String>? = null,
-    dir: File? = null,
-    commander: ProcessCommander,
-    script: ShellScript
-) {
-    Shell
-        .build(env, dir, commander)
-        .script()
-    logger.debug("script end")
-}
 
 @ExperimentalCoroutinesApi
 open class Shell private constructor (
     environment: Map<String, String>,
     variables: Map<String, String>,
     directory: File,
-    override val commander: ProcessCommander
-) : ShellPiping, ShellProcess, ShellManagement, ExecutionContext() {
+    final override val commander: ProcessCommander
+) : ShellPiping, ShellProcess, ShellManagement {
+
+    val nullin: ProcessReceiveChannel = Channel<ProcessChannelUnit>().apply { close() }
+    val nullout: ProcessSendChannel = NullSendChannel()
+
+    final override val stdin: ProcessReceiveChannel = nullin
+    final override val stdout: ProcessSendChannel
+    final override val stderr: ProcessSendChannel
 
     override var environment: Map<String, String> = environment
         protected set
@@ -54,6 +40,15 @@ open class Shell private constructor (
 
     override var directory: File = directory
         protected set
+
+    private val detachedJobs = mutableListOf<Pair<Process, Job>>()
+
+    init {
+        val systemOutChannel: ProcessChannel = Channel()
+        commander.scope.launch { systemOutChannel.consumeEach { System.out.writePacket(it) } }
+        stdout = systemOutChannel
+        stderr = systemOutChannel
+    }
 
     override fun cd(dir: File) {
         directory = assertDir(dir).canonicalFile
@@ -76,11 +71,40 @@ open class Shell private constructor (
         .apply { remove(key) }
         .toMap()
 
+    override suspend fun detach(executable: ProcessExecutable) {
+        executable.init()
+        println("INIT ${executable.process.vPID}")
+        val job = commander.scope.launch { executable.exec() }
+        detachedJobs.add(executable.process to job)
+    }
+
+    override val detached: List<Process>
+        get() = detachedJobs.map { it.first }
+
+    override suspend fun joinDetached() = detachedJobs.forEach { it.second.join() }
+
+    override suspend fun fg(process: Process) {
+        detachedJobs.first { it.first == process }
+            .apply {
+                commander.awaitProcess(first)
+                second.join()
+            }
+    }
+
+    override suspend fun finalize() {
+        joinDetached()
+        closeOut()
+    }
+
+    override fun exec(block: Shell.() -> String) = ShellExecutable(this, block)
+
     suspend fun shell(
         vars: Map<String, String> = emptyMap(),
         dir: File = directory,
         script: suspend Shell.() -> Unit
-    ) = Shell(environment, vars, dir, commander).script()
+    ) = Shell(environment, vars, dir, commander)
+        .apply { script() }
+        .finalize()
 
     companion object {
 

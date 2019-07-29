@@ -1,5 +1,6 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.ENVIRONMENT
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_ARGS
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
@@ -12,11 +13,12 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.ProcessResult
 import org.zeroturnaround.exec.StartedProcess
@@ -49,21 +51,32 @@ class SystemProcessTest {
     }
 
     @Test
-    fun `should start process`() {
+    fun `should start and execute process`() {
         // given
+        val futureMock = mockk<Future<ProcessResult>> {
+            every { get() } returns mockk {
+                every { exitValue } returns 0
+            }
+        }
+
         val startedProcessMock = mockk<StartedProcess> {
             every { process } returns mockk {
                 every { info().startInstant() } returns Optional.empty()
                 every { pid() } returns SYSTEM_PID
             }
+            every { future } returns futureMock
         }
+
         every { executorMock.start() } returns startedProcessMock
 
         // when
-        runTest { process.start() }
+        runTest {
+            process.start()
+        }
 
         // then
         verify (exactly = 1) { executorMock.start() }
+        assertEquals(ProcessState.TERMINATED, process.pcb.state)
     }
 
     @Test
@@ -227,10 +240,12 @@ class SystemProcessTest {
 
         val startedProcessMock = spyk(StartedProcess(processMock, futureMock))
 
+        var r = Result.success(Unit)
+
         // when
         runTest {
             process.pcb.startedProcess = startedProcessMock
-            assertThrows<Exception> { process.kill() }
+            r = runCatching { process.kill() }
         }
 
         // then
@@ -241,6 +256,9 @@ class SystemProcessTest {
             processMock.destroyForcibly()
         }
         confirmVerified(futureMock)
+
+        val e = r.exceptionOrNull()!!
+        assertEquals(Exception::class, e::class)
     }
 
     @Test
@@ -278,9 +296,9 @@ class SystemProcessTest {
             PROCESS_ARGS,
             ENVIRONMENT,
             directory,
-            null,
-            null,
-            null,
+            Channel(),
+            Channel(),
+            Channel(),
             this,
             executorMock
         )

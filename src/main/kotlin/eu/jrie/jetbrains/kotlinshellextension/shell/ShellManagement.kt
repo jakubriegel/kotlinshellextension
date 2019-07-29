@@ -45,29 +45,41 @@ interface ShellManagement : ShellBase {
      * Retrieves system environment variables
      *
      * @see [set]
+     * @see [systemEnv]
      */
-    fun env() //= printEnv(systemEnv())
-    = StringBuilder().let { b ->
-        systemEnv().forEach { (k, v) -> b.append("$k=$v\n") }
-        b.toString()
-    }
+    val env: ShellExecutable get() = exec { systemEnv.toEnvString() }
 
     /**
      * Retrieves system environment variable matching given key
      *
      * @see [env]
+     * @see [systemEnv]
      */
     fun env(key: String) = System.getenv(key) ?: ""
 
     /**
      * Retrieves all environment variables
      */
-    fun set() = printEnv(systemEnv().plus(environment).plus(variables))
+    val set: ShellExecutable get() = exec { shellEnv.toEnvString() }
 
-    private fun systemEnv() = System.getenv().toMap()
+    /**
+     * Retrieves all environment variables and returns them as a [Map]
+     */
+    val shellEnv: Map<String, String>
+        get() = systemEnv.plus(environment).plus(variables)
 
-    private fun printEnv(env: Map<String, String>) {
-        env.forEach { (k, v) -> println("$k=$v") }
+    /**
+     * Retrieves system environment variables and returns them as a [Map]
+     *
+     * @see [set]
+     * @see [env]
+     */
+    val systemEnv: Map<String, String>
+        get() = System.getenv().toMap()
+
+    private fun Map<String, String>.toEnvString() = StringBuilder().let { b ->
+        forEach { (k, v) -> b.append("$k=$v\n") }
+        b.toString()
     }
 }
 

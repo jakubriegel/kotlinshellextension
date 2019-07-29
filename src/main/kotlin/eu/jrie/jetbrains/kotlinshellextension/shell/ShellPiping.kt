@@ -3,12 +3,9 @@ package eu.jrie.jetbrains.kotlinshellextension.shell
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
 import java.io.File
-
-typealias PipelineFork = (@Suppress("EXPERIMENTAL_API_USAGE") ProcessIOBuffer) -> Unit
 
 @ExperimentalCoroutinesApi
 interface ShellPiping : ShellBase {
@@ -79,33 +76,33 @@ interface ShellPiping : ShellBase {
     @ExperimentalCoroutinesApi
     infix fun ProcessBuilder.append(file: File) = from(this) append file
 
-    /**
-     * Starts new [Pipeline] from this [ProcessIOBuffer].
-     * Shall be wrapped with piping DSL
-     *
-     * @see ProcessBuilder.pipe
-     * @return this [Pipeline]
-     */
-    private fun from(buffer: ProcessIOBuffer) =
-        Pipeline(buffer, commander)
-
-    /**
-     * Starts new [Pipeline] from this [ProcessIOBuffer] to [lambda].
-     * Part of piping DSL
-     *
-     * @see ProcessBuilder.pipe
-     * @return this [Pipeline]
-     */
-    infix fun ProcessIOBuffer.pipe(lambda: PipelineLambda) = from(this) pipe lambda
-
-    /**
-     * Starts new [Pipeline] from this [ProcessIOBuffer] to [process].
-     * Part of piping DSL
-     *
-     * @see ProcessBuilder.pipe
-     * @return this [Pipeline]
-     */
-    infix fun ProcessIOBuffer.pipe(process: ProcessBuilder) = from(this) pipe process
+//    /**
+//     * Starts new [Pipeline] from this [ProcessIOBuffer].
+//     * Shall be wrapped with piping DSL
+//     *
+//     * @see ProcessBuilder.pipe
+//     * @return this [Pipeline]
+//     */
+//    private fun from(buffer: ProcessIOBuffer) =
+//        Pipeline(buffer, commander)
+//
+//    /**
+//     * Starts new [Pipeline] from this [ProcessIOBuffer] to [lambda].
+//     * Part of piping DSL
+//     *
+//     * @see ProcessBuilder.pipe
+//     * @return this [Pipeline]
+//     */
+//    infix fun ProcessIOBuffer.pipe(lambda: PipelineLambda) = from(this) pipe lambda
+//
+//    /**
+//     * Starts new [Pipeline] from this [ProcessIOBuffer] to [process].
+//     * Part of piping DSL
+//     *
+//     * @see ProcessBuilder.pipe
+//     * @return this [Pipeline]
+//     */
+//    infix fun ProcessIOBuffer.pipe(process: ProcessBuilder) = from(this) pipe process
 
     /**
      * Starts new pipeline with [file].
@@ -200,20 +197,20 @@ interface ShellPiping : ShellBase {
     @ExperimentalCoroutinesApi
     infix fun Pipeline.append(file: File) = appendFile(file)
 
-    private fun forkErr(process: ProcessBuilder, fork: PipelineFork) {
-        ProcessIOBuffer().let {
-            process.withStderrBuffer(it)
-            fork.invoke(it)
-        }
-    }
-
-    /**
-     * Forks current [Pipeline] by creating new [Pipeline] with stderr from last process as an input
-     * Part of piping DSL
-     *
-     * @return this [ProcessBuilder]
-     */
-    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this.also { forkErr(this, fork) }
+//    private fun forkErr(process: ProcessBuilder, fork: PipelineFork) {
+//        ProcessIOBuffer().let {
+//            process.withStderrBuffer(it)
+//            fork.invoke(it)
+//        }
+//    }
+//
+//    /**
+//     * Forks current [Pipeline] by creating new [Pipeline] with stderr from last process as an input
+//     * Part of piping DSL
+//     *
+//     * @return this [ProcessBuilder]
+//     */
+//    infix fun ProcessBuilder.forkErr(fork: PipelineFork) = this.also { forkErr(this, fork) }
 
     /**
      * Awaits this [Pipeline]
@@ -258,4 +255,5 @@ val stdout: PipelineLambda = { print(it.readText()) }
  * @see ShellPiping
  * @see Pipeline
  */
-val nullout: (Any) -> Unit = {}
+@Deprecated("migration to ExecutorContext")
+val nulloutOld: (Any) -> Unit = {}

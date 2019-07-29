@@ -1,8 +1,11 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -74,6 +77,18 @@ class ShellManagementTest {
         assertEquals(System.getenv(key), result)
     }
 
+    @Test
+    fun `should retrieve all system environment variables`() {
+        // expect
+        assertEquals(System.getenv(), shell.systemEnv)
+    }
+
+    @Test
+    fun `should retrieve all environment variables`() {
+        // expect
+        assertEquals(System.getenv(), shell.shellEnv)
+    }
+
     @ExperimentalCoroutinesApi
     private class SampleShell : ShellManagement {
 
@@ -91,5 +106,13 @@ class ShellManagementTest {
         override var variables: Map<String, String> = emptyMap()
         override var directory: File = File("")
         override val commander: ProcessCommander = mockk()
+
+        override val stdout: ProcessSendChannel = Channel()
+        override val stderr: ProcessSendChannel = Channel()
+        override val stdin: ProcessReceiveChannel = Channel()
+
+        override suspend fun finalize() {}
+
+        override fun exec(block: Shell.() -> String): ShellExecutable = mockk()
     }
 }

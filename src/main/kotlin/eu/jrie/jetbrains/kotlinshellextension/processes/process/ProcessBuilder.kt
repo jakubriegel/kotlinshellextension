@@ -13,17 +13,9 @@ abstract class ProcessBuilder {
 
     protected val environment = mutableMapOf<String, String>()
 
-    @ExperimentalCoroutinesApi
-    var stdinBuffer: ProcessIOBuffer? = null
-        protected set
-
-    @ExperimentalCoroutinesApi
-    var stdoutBuffer: ProcessIOBuffer? = null
-        protected set
-
-    @ExperimentalCoroutinesApi
-    var stderrBuffer: ProcessIOBuffer? = null
-        protected set
+    protected lateinit var stdin: ProcessReceiveChannel
+    protected lateinit var stdout: ProcessSendChannel
+    protected lateinit var stderr: ProcessSendChannel
 
     protected lateinit var scope: CoroutineScope
 
@@ -35,33 +27,33 @@ abstract class ProcessBuilder {
     internal fun withVirtualPID(vPID: Int) = apply { this.vPID = vPID }
 
     /**
-     * Sets [buffer] as a source of [Process.stdin]
+     * Sets [Process.stdin]
      *
      * @return this builder
      */
     @ExperimentalCoroutinesApi
-    internal fun withStdinBuffer(buffer: ProcessIOBuffer) = apply {
-        stdinBuffer = buffer
+    internal fun withStdin(channel: ProcessReceiveChannel) = apply {
+        stdin = channel
     }
 
     /**
-     * Sets [buffer] as a destination of [Process.stdout]
+     * Sets [Process.stdout]
      *
      * @return this builder
      */
     @ExperimentalCoroutinesApi
-    internal fun withStdoutBuffer(buffer: ProcessIOBuffer) = apply {
-        stdoutBuffer = buffer
+    internal fun withStdout(channel: ProcessSendChannel) = apply {
+        stdout = channel
     }
 
     /**
-     * Sets [buffer] as a destination of [Process.stderr]
+     * Sets [Process.stderr]
      *
      * @return this builder
      */
     @ExperimentalCoroutinesApi
-    internal fun withStderrBuffer(buffer: ProcessIOBuffer) = apply {
-        stderrBuffer = buffer
+    internal fun withStderr(channel: ProcessSendChannel) = apply {
+        stderr = channel
     }
 
     /**

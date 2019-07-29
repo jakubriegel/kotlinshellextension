@@ -15,9 +15,9 @@ class SystemProcessBuilder (
         arguments,
         environment,
         directory,
-        stdinBuffer,
-        stdoutBuffer,
-        stderrBuffer,
+        stdin,
+        stdout,
+        stderr,
         scope
     )
 

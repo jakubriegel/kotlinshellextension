@@ -35,12 +35,10 @@ abstract class ProcessBaseIntegrationTest : BaseIntegrationTest() {
         val file = file("script", scriptCode(n))
 
         shell {
-            val chmod = launchSystemProcess {
-                cmd {
-                    "chmod" withArgs listOf("+x", file.name)
-                }
+            val chmod = systemProcess {
+                cmd { "chmod" withArgs listOf("+x", file.name) }
             }
-            commander.awaitProcess(chmod)
+            chmod()
         }
 
         return file

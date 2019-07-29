@@ -1,17 +1,15 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.PCB
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import kotlinx.io.core.BytePacketBuilder
 import kotlinx.io.streams.inputStream
 import org.jetbrains.annotations.TestOnly
@@ -31,23 +29,23 @@ class SystemProcess @TestOnly internal constructor (
     val arguments: List<String>,
     environment: Map<String, String>,
     directory: File,
-    stdinBuffer: ProcessIOBuffer?,
-    stdoutBuffer: ProcessIOBuffer?,
-    stderrBuffer: ProcessIOBuffer?,
+    stdin: ProcessReceiveChannel,
+    stdout: ProcessSendChannel,
+    stderr: ProcessSendChannel,
     scope: CoroutineScope,
     private val executor: ProcessExecutor
-) : Process(vPID, environment, directory, stdinBuffer, stdoutBuffer, stderrBuffer, scope) {
+) : Process(vPID, environment, directory, stdin, stdout, stderr, scope) {
 
     constructor(vPID: Int,
                 command: String,
                 arguments: List<String>,
                 environment: Map<String, String>,
                 directory: File,
-                stdinBuffer: ProcessIOBuffer?,
-                stdoutBuffer: ProcessIOBuffer?,
-                stderrBuffer: ProcessIOBuffer?,
+                stdin: ProcessReceiveChannel,
+                stdout: ProcessSendChannel,
+                stderr: ProcessSendChannel,
                 scope: CoroutineScope
-    ) : this(vPID, command, arguments, environment, directory, stdinBuffer, stdoutBuffer, stderrBuffer, scope, ProcessExecutor())
+    ) : this(vPID, command, arguments, environment, directory, stdin, stdout, stderr, scope, ProcessExecutor())
 
     override val pcb = SystemPCB()
 
@@ -71,26 +69,28 @@ class SystemProcess @TestOnly internal constructor (
             .directory(directory)
     }
 
-    override fun execute(): PCB {
-        val started = executor.start()!!
+    @ObsoleteCoroutinesApi
+    override suspend fun execute() = scope.launch(
+        newSingleThreadContext("${this}_execution_thread")
+    ) {
+        go()
+        expect(0)
+    }
 
+    private fun go() {
+        val started = executor.start()!!
         pcb.startTime = started.process.info().startInstant().orElse(Instant.now())
         pcb.systemPID = started.process.pid()
         pcb.startedProcess = started
-
-        return pcb
     }
 
     override fun isAlive() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
 
-    @ObsoleteCoroutinesApi
     override suspend fun expect(timeout: Long) {
-        withContext(Dispatchers.Default) {
-            with(pcb.startedProcess!!) {
-                val result = if (timeout.compareTo(0) == 0) future.get()
-                else future.get(timeout, TimeUnit.MILLISECONDS)
-                pcb.exitCode = result.exitValue
-            }
+        with(pcb.startedProcess!!) {
+            val result = if (timeout.compareTo(0) == 0) future.get()
+            else future.get(timeout, TimeUnit.MILLISECONDS)
+            pcb.exitCode = result.exitValue
         }
     }
 
@@ -103,19 +103,18 @@ class SystemProcess @TestOnly internal constructor (
         }
     }
 
-    override fun toString() = name
-
     internal class SystemProcessLogOutputStream (
-        private val sink: ProcessSendChannel,
+        private val out: ProcessSendChannel,
         private val scope: CoroutineScope
     ) : LogOutputStream() {
         override fun processLine(line: String?) {
             if (line != null) {
                 BytePacketBuilder()
-                    .append(line.plus('\n'))
+                    .append(line)
+                    .append('\n')
                     .build()
                     .also {
-                        runBlocking(scope.coroutineContext) { sink.send(it) }
+                        runBlocking(scope.coroutineContext) { out.send(it) }
                     }
             }
         }
@@ -189,22 +188,17 @@ class SystemProcess @TestOnly internal constructor (
     }
 
     private fun ProcessExecutor.redirectInput() = apply {
-        if (stdin != null) redirectInput(SystemProcessInputStream(stdin, scope))
+        redirectInput(SystemProcessInputStream(stdin, scope))
     }
 
     private fun ProcessExecutor.redirectOutput() = apply {
-        when (stderr) {
-            null -> redirectStdOut()
-            else -> {
-                redirectStdOut()
-                redirectStdErr()
-            }
-        }
+        redirectStdOut()
+        redirectStdErr()
     }
 
     private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout, scope))
 
-    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr!!, scope))
+    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr, scope))
 
     companion object {
         private const val INPUT_STREAM_BUFFER_SIZE = 512
