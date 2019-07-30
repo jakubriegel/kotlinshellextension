@@ -6,7 +6,6 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import java.io.File
 
 typealias ShellScript = suspend Shell.() -> Unit
@@ -25,12 +24,12 @@ suspend fun shell(
     scope: CoroutineScope,
     script: ShellScript
 ) {
-    scope.launch { shell(env, dir, ProcessCommander(scope), script) }
+    shell(env, dir, ProcessCommander(scope), script)
     Shell.logger.debug("shell end")
 }
 
 @ExperimentalCoroutinesApi
-suspend fun shell(
+private suspend fun shell(
     env: Map<String, String>? = null,
     dir: File? = null,
     commander: ProcessCommander,
