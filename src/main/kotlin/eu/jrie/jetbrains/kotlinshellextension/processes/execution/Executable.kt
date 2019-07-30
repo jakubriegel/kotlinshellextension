@@ -5,8 +5,11 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 abstract class Executable (
-    protected var context: ExecutionContext
+    context: ExecutionContext
 ) {
+
+    internal var context = context
+
     internal open fun init() = Unit
 
     internal abstract suspend fun exec()

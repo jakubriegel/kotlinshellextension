@@ -2,12 +2,15 @@ package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
 import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutable
+import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.NullSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipeConfig
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.ShellPiping
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -51,6 +54,11 @@ open class Shell private constructor (
 
     private val daemonsExecs = mutableListOf<ProcessExecutable>()
 
+    override val pipelines: List<Pipeline>
+        get() = detachedPipelines.toList()//.map { it.first }
+
+    private val detachedPipelines = mutableListOf<Pipeline>()//Pair<Pipeline, Job>>()
+
     init {
         val systemOutChannel: ProcessChannel = Channel()
         commander.scope.launch { systemOutChannel.consumeEach { System.out.writePacket(it) } }
@@ -86,7 +94,10 @@ open class Shell private constructor (
         detachedJobs.add(executable.process to job)
     }
 
-    override suspend fun joinDetached() = detachedJobs.forEach { it.second.join() }
+    override suspend fun joinDetached() {
+        detachedJobs.forEach { it.second.join() }
+        detachedPipelines.forEach { it.await() }
+    }
 
     override suspend fun fg(process: Process) {
         detachedJobs.first { it.first == process }
@@ -101,6 +112,12 @@ open class Shell private constructor (
         executable.exec()
         daemonsExecs.add(executable)
         logger.debug("started daemon ${executable.process}")
+    }
+
+    override suspend fun detach(pipeConfig: PipeConfig) {
+        detachedPipelines.add(
+            this.pipeConfig().toEndChannel(stdout)
+        )
     }
 
     override suspend fun finalize() {

@@ -53,7 +53,6 @@ class ProcessTest {
         runTest {
             every { process.isAlive() } returns true
 
-            process.closeOut()
             process.await(timeout)
         }
 
@@ -110,7 +109,6 @@ class ProcessTest {
     private fun <T> runTest(test: suspend ProcessTest.() -> T): T = runBlocking {
         process = spyk(SampleProcess(this))
         val result = test()
-        process.closeOut()
         result
     }
 

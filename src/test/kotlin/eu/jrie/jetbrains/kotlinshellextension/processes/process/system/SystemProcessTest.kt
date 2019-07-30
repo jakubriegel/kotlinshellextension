@@ -42,8 +42,6 @@ class SystemProcessTest {
         // then
         verify (exactly = 1) {
             executorMock.command(listOf(PROCESS_COMMAND).plus(PROCESS_ARGS))
-//TODO: remove            executorMock.destroyOnExit()
-            executorMock.addListener(ofType(SystemProcess.SystemProcessListener::class))
             executorMock.redirectOutput(ofType(SystemProcess.SystemProcessLogOutputStream::class))
             executorMock.environment(ENVIRONMENT)
             executorMock.directory(directory)
@@ -138,7 +136,6 @@ class SystemProcessTest {
                 every { future } returns futureMock
             }
 
-            process.closeOut()
             process.await(0)
         }
 
@@ -165,7 +162,6 @@ class SystemProcessTest {
                 every { future } returns futureMock
             }
 
-            process.closeOut()
             process.await(timeout)
         }
 
@@ -303,7 +299,6 @@ class SystemProcessTest {
             executorMock
         )
         val result = test()
-        process.closeOut()
         result
     }
 }

@@ -14,7 +14,6 @@ import kotlinx.io.core.BytePacketBuilder
 import kotlinx.io.streams.inputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
-import org.zeroturnaround.exec.listener.ProcessListener
 import org.zeroturnaround.exec.stream.LogOutputStream
 import java.io.File
 import java.io.InputStream
@@ -61,8 +60,6 @@ class SystemProcess @TestOnly internal constructor (
     init {
         executor
             .command(listOf(command).plus(arguments))
-//            .destroyOnExit()
-            .addListener(SystemProcessListener(this))
             .redirectInput()
             .redirectOutput()
             .environment(environment)
@@ -166,18 +163,6 @@ class SystemProcess @TestOnly internal constructor (
 
         companion object {
             private const val MINUS_ONE: Byte = -1
-        }
-    }
-
-    class SystemProcessListener (
-        private val process: SystemProcess
-    ) : ProcessListener() {
-        override fun afterStop(process: java.lang.Process?) = finalizeProcess()
-
-        private fun finalizeProcess() {
-            logger.debug("finalizing $process}")
-            process.closeOut()
-            logger.debug("finalized $process}")
         }
     }
 

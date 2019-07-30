@@ -574,9 +574,9 @@
 //            }
 //
 //            from(echo)
-//                .toProcess(grep)
-//                .toProcess(systemProcess { cmd = "cat" })
-//                .toLambda(storeResult)
+//                .throughProcess(grep)
+//                .throughProcess(systemProcess { cmd = "cat" })
+//                .throughLambda(storeResult)
 //                .await()
 //        }
 //

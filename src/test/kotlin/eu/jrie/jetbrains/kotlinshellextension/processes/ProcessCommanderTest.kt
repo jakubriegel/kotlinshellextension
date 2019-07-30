@@ -38,7 +38,6 @@ class ProcessCommanderTest {
 
         // when
         val process = c.createProcess(builder)
-        process.closeOut()
 
         // then
         verifyOrder {
@@ -60,8 +59,6 @@ class ProcessCommanderTest {
         // when
         val process1 = c.createProcess(builder1)
         val process2 = c.createProcess(builder2)
-        process1.closeOut()
-        process2.closeOut()
 
         // then
         verify (exactly = 1) {

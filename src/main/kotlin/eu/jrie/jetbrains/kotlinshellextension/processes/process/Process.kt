@@ -73,13 +73,6 @@ protected constructor (
 
     protected abstract suspend fun expect(timeout: Long)
 
-    internal fun closeOut() {
-//        TODO: disconnect closing out with process execution
-//        stdout.close()
-//        stderr.close()
-        logger.debug("closed out of $name")
-    }
-
     internal suspend fun kill() {
         destroy()
         finalize()
