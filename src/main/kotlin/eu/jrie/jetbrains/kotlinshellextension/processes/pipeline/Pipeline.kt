@@ -42,6 +42,9 @@ class Pipeline private constructor (
     private val context: ProcessExecutionContext
 ) {
 
+    var ended = false
+        private set
+
     private val processLine = mutableListOf<Process>()
 
     private lateinit var lastOut: ProcessReceiveChannel
@@ -70,7 +73,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      */
     internal constructor(lambda: PipelineContextLambda, context: ProcessExecutionContext) : this(context) {
-        addLambda(lambda)
+        addLambda(lambda, end = false, closeOut = true)
     }
 
     /**
@@ -92,11 +95,12 @@ class Pipeline private constructor (
             { ctx ->
                 stream.use {
                     while (it.available() > 0) {
-                        val packet = it.readPacketAtMost(STREAM_RW_PACKET_SIZE)
+                        val packet = it.readPacketAtMost(PIPELINE_CHANNEL_PACKET_SIZE)
                         ctx.stdout.send(packet)
                     }
                 }
-            }
+            },
+            end = false, closeOut = true
         )
     }
 
@@ -110,7 +114,7 @@ class Pipeline private constructor (
         addProcess(process.updateContext(newIn = lastOut))
     }
 
-    private fun addProcess(exec: ProcessExecutable) {
+    private fun addProcess(exec: ProcessExecutable) = ifNotEnded {
         exec.updateContext(newOut = channel()).init()
 
         launch {
@@ -128,31 +132,34 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun throughLambda(end: Boolean = false, lambda: PipelineContextLambda) = apply {
-        addLambda(lambda, context.updated(newIn = lastOut), end)
+    fun throughLambda(end: Boolean = false, closeOut: Boolean = true, lambda: PipelineContextLambda) = apply {
+        addLambda(lambda, context.updated(newIn = lastOut), end, closeOut)
     }
 
     private fun addLambda(
         lambda: PipelineContextLambda,
         lambdaContext: PipelineExecutionContext = PipelineExecutionContext(context),
-        end: Boolean = false
-    ) = lambdaContext
+        end: Boolean,
+        closeOut: Boolean
+    ) = ifNotEnded {
+        lambdaContext
             .let { if (!end) it.updated(newOut = channel()) else it }
             .let { ctx ->
                 launch {
                     lambda(ctx)
-                    if (!end) ctx.stdout.close()
+                    if (closeOut) ctx.stdout.close()
                 }
             }
+    }
 
-    /**
-     * Ends this [Pipeline] with [channel]
-     *
-     * @see ShellPiping
-     * @return this [Pipeline]
-     */
-    private fun toEndLambda(lambda: suspend (ByteReadPacket) -> Unit) = throughLambda(end = true) { ctx ->
-        ctx.stdin.consumeEach { lambda(it) }
+    private suspend fun toEndLambda(
+        closeOut: Boolean = true, lambda: suspend (ByteReadPacket) -> Unit
+    ) = apply {
+        throughLambda(end = true, closeOut = closeOut) { ctx ->
+            ctx.stdin.consumeEach { lambda(it) }
+        }
+        ended = true
+        await()
     }
 
     /**
@@ -161,7 +168,11 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toEndChannel(channel: ProcessSendChannel) = toEndLambda { channel.send(it) }
+    suspend fun toEndChannel(channel: ProcessSendChannel) = toEndLambda { channel.send(it) }
+
+    internal suspend fun toDefaultEndChannel(channel: ProcessSendChannel) = toEndLambda(false) {
+        channel.send(it)
+    }
 
     /**
      * Ends this [Pipeline] with [packetBuilder]
@@ -169,7 +180,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toEndPacket(packetBuilder: BytePacketBuilder) = toEndLambda { packetBuilder.writePacket(it) }
+    suspend fun toEndPacket(packetBuilder: BytePacketBuilder) = toEndLambda { packetBuilder.writePacket(it) }
 
     /**
      * Ends this [Pipeline] with [stream]
@@ -177,7 +188,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toEndStream(stream: OutputStream) = toEndLambda { stream.writePacket(it) }
+    suspend fun toEndStream(stream: OutputStream) = toEndLambda { stream.writePacket(it) }
 
     /**
      * Ends this [Pipeline] with [file]
@@ -185,7 +196,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toEndFile(file: File, append: Boolean = false) = toEndStream(FileOutputStream(file, append))
+    suspend fun toEndFile(file: File, append: Boolean = false) = toEndStream(FileOutputStream(file, append))
 
     /**
      * Ends this [Pipeline] with [stringBuilder]
@@ -193,7 +204,7 @@ class Pipeline private constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toEndStringBuilder(stringBuilder: StringBuilder) = toEndLambda { stringBuilder.append(it) }
+    suspend fun toEndStringBuilder(stringBuilder: StringBuilder) = toEndLambda { stringBuilder.append(it) }
 
     /**
      * Awaits all processes in this [Pipeline]
@@ -224,7 +235,7 @@ class Pipeline private constructor (
     /**
      * Returns new [ProcessSendChannel] and sets it as [lastOut]
      */
-    private fun channel(): ProcessSendChannel = Channel<ProcessChannelUnit>().also { lastOut = it }
+    private fun channel(): ProcessSendChannel = Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also { lastOut = it }
 
     private fun launchIO(ioBlock: suspend CoroutineScope.() -> Unit) = launch {
         withContext(Dispatchers.IO, ioBlock)
@@ -234,9 +245,14 @@ class Pipeline private constructor (
         asyncJobs.add(context.commander.scope.launch(block = block))
     }
 
+    private fun ifNotEnded(block: () -> Unit) {
+        if (ended) throw Exception("Pipeline ended")
+        else block()
+    }
+
     companion object {
-        private const val STREAM_RW_PACKET_SIZE: Long = 256
-        private const val STREAM_RW_CHANNEL_BUFFER_SIZE = 16
+        private const val PIPELINE_CHANNEL_PACKET_SIZE: Long = 256
+        private const val PIPELINE_CHANNEL_BUFFER_SIZE = 16
 
         private val logger = LoggerFactory.getLogger(Pipeline::class.java)
     }

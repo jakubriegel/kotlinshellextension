@@ -35,7 +35,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(channel: ProcessSendChannel) = from(this.inputStream()) pipe channel
+    suspend infix fun ByteReadPacket.pipe(channel: ProcessSendChannel) = from(this.inputStream()) pipe channel
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [packetBuilder].
@@ -43,7 +43,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(packetBuilder: BytePacketBuilder) = from(this.inputStream()) pipe packetBuilder
+    suspend infix fun ByteReadPacket.pipe(packetBuilder: BytePacketBuilder) = from(this.inputStream()) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [stream].
@@ -51,7 +51,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(stream: OutputStream) = from(this.inputStream()) pipe stream
+    suspend infix fun ByteReadPacket.pipe(stream: OutputStream) = from(this.inputStream()) pipe stream
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [file].
@@ -59,7 +59,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(file: File) = from(this.inputStream()) pipe file
+    suspend infix fun ByteReadPacket.pipe(file: File) = from(this.inputStream()) pipe file
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [stringBuilder].
@@ -67,6 +67,6 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(stringBuilder: StringBuilder) = from(this.inputStream()) pipe stringBuilder
+    suspend infix fun ByteReadPacket.pipe(stringBuilder: StringBuilder) = from(this.inputStream()) pipe stringBuilder
 
 }

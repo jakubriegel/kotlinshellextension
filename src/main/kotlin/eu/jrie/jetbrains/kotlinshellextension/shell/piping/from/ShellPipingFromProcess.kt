@@ -46,7 +46,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(channel: ProcessSendChannel) = from(this) pipe channel
+    suspend infix fun ProcessExecutable.pipe(channel: ProcessSendChannel) = from(this) pipe channel
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [packetBuilder].
@@ -55,7 +55,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
+    suspend infix fun ProcessExecutable.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [stream].
@@ -64,7 +64,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(stream: OutputStream) = from(this) pipe stream
+    suspend infix fun ProcessExecutable.pipe(stream: OutputStream) = from(this) pipe stream
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [file].
@@ -73,7 +73,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(file: File) = from(this) pipe file
+    suspend infix fun ProcessExecutable.pipe(file: File) = from(this) pipe file
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [stringBuilder].
@@ -82,5 +82,5 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
+    suspend infix fun ProcessExecutable.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
 }

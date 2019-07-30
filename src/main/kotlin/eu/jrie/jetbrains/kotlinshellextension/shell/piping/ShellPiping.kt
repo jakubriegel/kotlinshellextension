@@ -3,24 +3,30 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
+import eu.jrie.jetbrains.kotlinshellextension.shell.ExecutionMode
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.from.ShellPipingFrom
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 typealias PipeConfig =  suspend ShellPiping.() -> Pipeline
 
 @ExperimentalCoroutinesApi
-interface ShellPiping : ShellPipingFrom,
-    ShellPipingThrough,
-    ShellPipingTo {
+interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
 
+    /**
+     * List of all pipelines in this shell
+     */
     val pipelines: List<Pipeline>
 
     /**
      * Creates and executes new [Pipeline] specified by DSL [pipeConfig]
      * Part of piping DSL
      */
-    suspend fun pipeline(pipeConfig: PipeConfig) {
-        pipeConfig() pipe stdout await all
+    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) {
+        when (mode) {
+            ExecutionMode.ATTACHED -> pipeConfig().apply { if (!ended) toDefaultEndChannel(stdout) }
+            ExecutionMode.DETACHED -> detach(pipeConfig)
+            ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
+        }
     }
 
     /**
@@ -28,6 +34,8 @@ interface ShellPiping : ShellPipingFrom,
      * Part of piping DSL
      */
     suspend fun detach(pipeConfig: PipeConfig)
+
+
 
     /**
      * Awaits this [Pipeline]

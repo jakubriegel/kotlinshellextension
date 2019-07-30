@@ -1,16 +1,10 @@
-//package eu.jrie.jetbrains.kotlinshellextension.shell
-//
-//import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
-//import kotlinx.coroutines.ExperimentalCoroutinesApi
-//import kotlinx.io.core.BytePacketBuilder
-//import org.junit.jupiter.api.Assertions.assertEquals
-//import org.junit.jupiter.api.Test
-//import java.io.File
-//import java.io.PrintStream
-//
-//@ExperimentalCoroutinesApi
-//class PipingIntegrationTest : ProcessBaseIntegrationTest() {
-//
+package eu.jrie.jetbrains.kotlinshellextension.shell
+
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+
+@ExperimentalCoroutinesApi
+class PipingIntegrationTest : ProcessBaseIntegrationTest() {
+
 //    @Test
 //    fun `should pipe to function`() {
 //        // given
@@ -583,4 +577,4 @@
 //        // then
 //        assertEquals("abc\n", readResult())
 //    }
-//}
+}

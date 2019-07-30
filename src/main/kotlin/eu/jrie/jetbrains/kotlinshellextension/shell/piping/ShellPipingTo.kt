@@ -17,7 +17,7 @@ interface ShellPipingTo : ShellBase {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(channel: ProcessSendChannel) = toEndChannel(channel)
+    suspend infix fun Pipeline.pipe(channel: ProcessSendChannel) = toEndChannel(channel)
 
     /**
      * Ends this [Pipeline] with [packetBuilder]
@@ -26,7 +26,7 @@ interface ShellPipingTo : ShellBase {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(packetBuilder: BytePacketBuilder) = toEndPacket(packetBuilder)
+    suspend infix fun Pipeline.pipe(packetBuilder: BytePacketBuilder) = toEndPacket(packetBuilder)
 
     /**
      * Ends this [Pipeline] with [stream]
@@ -35,7 +35,7 @@ interface ShellPipingTo : ShellBase {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(stream: OutputStream) = toEndStream(stream)
+    suspend infix fun Pipeline.pipe(stream: OutputStream) = toEndStream(stream)
 
     /**
      * Ends this [Pipeline] with [file]
@@ -44,7 +44,7 @@ interface ShellPipingTo : ShellBase {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(file: File) = toEndFile(file)
+    suspend infix fun Pipeline.pipe(file: File) = toEndFile(file)
 
     /**
      * Ends this [Pipeline] with [stringBuilder]
@@ -53,5 +53,5 @@ interface ShellPipingTo : ShellBase {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(stringBuilder: StringBuilder) = toEndStringBuilder(stringBuilder)
+    suspend infix fun Pipeline.pipe(stringBuilder: StringBuilder) = toEndStringBuilder(stringBuilder)
 }

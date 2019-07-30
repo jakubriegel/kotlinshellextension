@@ -33,7 +33,7 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(channel: ProcessSendChannel) = from(this.byteInputStream()) pipe channel
+    suspend infix fun String.pipe(channel: ProcessSendChannel) = from(this.byteInputStream()) pipe channel
 
     /**
      * Starts new [Pipeline] from this [String] to [packetBuilder].
@@ -41,7 +41,7 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(packetBuilder: BytePacketBuilder) = from(this.byteInputStream()) pipe packetBuilder
+    suspend infix fun String.pipe(packetBuilder: BytePacketBuilder) = from(this.byteInputStream()) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from this [String] to [stream].
@@ -49,7 +49,7 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(stream: OutputStream) = from(this.byteInputStream()) pipe stream
+    suspend infix fun String.pipe(stream: OutputStream) = from(this.byteInputStream()) pipe stream
 
     /**
      * Starts new [Pipeline] from this [String] to [file].
@@ -57,7 +57,7 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(file: File) = from(this.byteInputStream()) pipe file
+    suspend infix fun String.pipe(file: File) = from(this.byteInputStream()) pipe file
 
     /**
      * Starts new [Pipeline] from this [String] to [stringBuilder].
@@ -65,5 +65,5 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(stringBuilder: StringBuilder) = from(this.byteInputStream()) pipe stringBuilder
+    suspend infix fun String.pipe(stringBuilder: StringBuilder) = from(this.byteInputStream()) pipe stringBuilder
 }

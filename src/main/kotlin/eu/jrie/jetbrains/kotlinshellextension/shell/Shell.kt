@@ -55,12 +55,12 @@ open class Shell private constructor (
     private val daemonsExecs = mutableListOf<ProcessExecutable>()
 
     override val pipelines: List<Pipeline>
-        get() = detachedPipelines.toList()//.map { it.first }
+        get() = emptyList() // detachedPipelines.map { it.first }
 
-    private val detachedPipelines = mutableListOf<Pipeline>()//Pair<Pipeline, Job>>()
+    private val detachedPipelines = mutableListOf<Job>()
 
     init {
-        val systemOutChannel: ProcessChannel = Channel()
+        val systemOutChannel: ProcessChannel = Channel(16)
         commander.scope.launch { systemOutChannel.consumeEach { System.out.writePacket(it) } }
         stdout = systemOutChannel
         stderr = systemOutChannel
@@ -94,9 +94,14 @@ open class Shell private constructor (
         detachedJobs.add(executable.process to job)
     }
 
+    override suspend fun detach(pipeConfig: PipeConfig) {
+        val job = commander.scope.launch { this@Shell.pipeConfig().apply { if (!ended) toDefaultEndChannel(stdout) } }
+        detachedPipelines.add(job)
+    }
+
     override suspend fun joinDetached() {
         detachedJobs.forEach { it.second.join() }
-        detachedPipelines.forEach { it.await() }
+        detachedPipelines.forEach { it.join() }
     }
 
     override suspend fun fg(process: Process) {
@@ -112,12 +117,6 @@ open class Shell private constructor (
         executable.exec()
         daemonsExecs.add(executable)
         logger.debug("started daemon ${executable.process}")
-    }
-
-    override suspend fun detach(pipeConfig: PipeConfig) {
-        detachedPipelines.add(
-            this.pipeConfig().toEndChannel(stdout)
-        )
     }
 
     override suspend fun finalize() {

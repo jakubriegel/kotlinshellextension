@@ -43,7 +43,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(channel: ProcessSendChannel) = from(this) pipe channel
+    suspend infix fun InputStream.pipe(channel: ProcessSendChannel) = from(this) pipe channel
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [packetBuilder].
@@ -51,7 +51,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
+    suspend infix fun InputStream.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [stream].
@@ -59,7 +59,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(stream: OutputStream) = from(this) pipe stream
+    suspend infix fun InputStream.pipe(stream: OutputStream) = from(this) pipe stream
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [file].
@@ -67,7 +67,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(file: File) = from(this) pipe file
+    suspend infix fun InputStream.pipe(file: File) = from(this) pipe file
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [stringBuilder].
@@ -75,5 +75,5 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
+    suspend infix fun InputStream.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
 }

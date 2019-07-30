@@ -42,7 +42,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(channel: ProcessSendChannel) = from(this) pipe channel
+    suspend infix fun PipelineContextLambda.pipe(channel: ProcessSendChannel) = from(this) pipe channel
 
     /**
      * Starts new [Pipeline] from this lambda to [packetBuilder].
@@ -50,7 +50,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
+    suspend infix fun PipelineContextLambda.pipe(packetBuilder: BytePacketBuilder) = from(this) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from this lambda to [stream].
@@ -58,7 +58,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(stream: OutputStream) = from(this) pipe stream
+    suspend infix fun PipelineContextLambda.pipe(stream: OutputStream) = from(this) pipe stream
 
     /**
      * Starts new [Pipeline] from this lambda to [file].
@@ -66,7 +66,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(file: File) = from(this) pipe file
+    suspend infix fun PipelineContextLambda.pipe(file: File) = from(this) pipe file
 
     /**
      * Starts new [Pipeline] from this lambda to [stringBuilder].
@@ -74,5 +74,5 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
+    suspend infix fun PipelineContextLambda.pipe(stringBuilder: StringBuilder) = from(this) pipe stringBuilder
 }
