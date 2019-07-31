@@ -3,21 +3,12 @@ package eu.jrie.jetbrains.kotlinshellextension.processes.process
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.SendChannel
-import kotlinx.io.core.ByteReadPacket
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
-
-typealias ProcessChannelUnit = ByteReadPacket
-typealias ProcessChannel = Channel<ProcessChannelUnit>
-typealias ProcessReceiveChannel = ReceiveChannel<ProcessChannelUnit>
-typealias ProcessSendChannel = SendChannel<ProcessChannelUnit>
 
 @ExperimentalCoroutinesApi
 abstract class Process @ExperimentalCoroutinesApi

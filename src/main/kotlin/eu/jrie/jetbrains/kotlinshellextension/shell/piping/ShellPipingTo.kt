@@ -6,6 +6,7 @@ import eu.jrie.jetbrains.kotlinshellextension.shell.ShellBase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
@@ -44,7 +45,18 @@ interface ShellPipingTo : ShellBase {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    suspend infix fun Pipeline.pipe(file: File) = toEndFile(file)
+    suspend infix fun Pipeline.pipe(file: File) = toEndFile(file, false)
+
+    /**
+     * Ends this [Pipeline] with [file] by appending to it
+     * Part of piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    @ExperimentalCoroutinesApi
+    suspend infix fun Pipeline.pipeAppend(file: File) = toEndFile(file, true)
+
+    private suspend fun Pipeline.toEndFile(file: File, append: Boolean) = toEndStream(FileOutputStream(file, append))
 
     /**
      * Ends this [Pipeline] with [stringBuilder]

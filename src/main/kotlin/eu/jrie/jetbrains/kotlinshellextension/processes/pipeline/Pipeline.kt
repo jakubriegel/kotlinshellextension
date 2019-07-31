@@ -22,14 +22,10 @@ import kotlinx.io.core.ByteReadPacket
 import kotlinx.io.streams.readPacketAtMost
 import kotlinx.io.streams.writePacket
 import org.slf4j.LoggerFactory
-import java.io.File
-import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 
-typealias PipelineContextLambda = suspend (
-    context: ExecutionContext
-) -> Unit
+typealias PipelineContextLambda = suspend (context: ExecutionContext) -> Unit
 
 /**
  * The entity representing pipeline.
@@ -77,7 +73,7 @@ class Pipeline private constructor (
     }
 
     /**
-     * Starts new [Pipeline] with [lambda]
+     * Starts new [Pipeline] with [channel]
      *
      * @see ShellPiping
      */
@@ -191,14 +187,6 @@ class Pipeline private constructor (
     suspend fun toEndStream(stream: OutputStream) = toEndLambda { stream.writePacket(it) }
 
     /**
-     * Ends this [Pipeline] with [file]
-     *
-     * @see ShellPiping
-     * @return this [Pipeline]
-     */
-    suspend fun toEndFile(file: File, append: Boolean = false) = toEndStream(FileOutputStream(file, append))
-
-    /**
      * Ends this [Pipeline] with [stringBuilder]
      *
      * @see ShellPiping
@@ -207,7 +195,7 @@ class Pipeline private constructor (
     suspend fun toEndStringBuilder(stringBuilder: StringBuilder) = toEndLambda { stringBuilder.append(it) }
 
     /**
-     * Awaits all processes in this [Pipeline]
+     * Awaits all processes and jobs in this [Pipeline]
      *
      * @see ShellPiping
      * @return this [Pipeline]
