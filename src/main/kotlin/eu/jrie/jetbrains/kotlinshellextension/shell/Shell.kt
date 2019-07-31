@@ -95,7 +95,7 @@ open class Shell private constructor (
     }
 
     override suspend fun detach(pipeConfig: PipeConfig) {
-        val job = commander.scope.launch { this@Shell.pipeConfig().apply { if (!ended) toDefaultEndChannel(stdout) } }
+        val job = commander.scope.launch { this@Shell.pipeConfig().apply { if (!closed) toDefaultEndChannel(stdout) } }
         detachedPipelines.add(job)
     }
 

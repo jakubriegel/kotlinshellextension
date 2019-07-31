@@ -41,6 +41,10 @@ interface ShellPipingThrough : ShellPipingTo {
 
     fun contextLambda(lambda: PipelineContextLambda) = lambda
 
+    /**
+     * Constructs [PipelinePacketLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun packetLambda(
         lambda: PipelinePacketLambda
     ): PipelineContextLambda = { ctx ->
@@ -51,10 +55,27 @@ interface ShellPipingThrough : ShellPipingTo {
         }
     }
 
+    /**
+     * Constructs [ByteReadPacket] from given [bytes]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     */
     fun packet(bytes: ByteArray) = buildPacket { writeFully(bytes) }
-    fun packet(string: String) = packet(string.toByteArray())
-    fun emptyPacket() = packet("")
 
+    /**
+     * Constructs empty [ByteReadPacket]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     * @see stringLambda
+     */
+    fun emptyPacket() = packet(emptyByteArray())
+
+    /**
+     * Constructs [PipelineByteArrayLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun byteArrayLambda(
         lambda: PipelineByteArrayLambda
     ) = packetLambda { p ->
@@ -63,12 +84,29 @@ interface ShellPipingThrough : ShellPipingTo {
 
     fun emptyByteArray() = ByteArray(0)
 
+    /**
+     * Constructs [PipelineStringLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun stringLambda(
         lambda: PipelineStringLambda
     ) = packetLambda { b ->
         lambda(b.readText()).let { packet(it.first) to packet(it.second) }
     }
 
+    /**
+     * Constructs [ByteReadPacket] from given [string]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     * @see stringLambda
+     */
+    fun packet(string: String) = packet(string.toByteArray())
+
+    /**
+     * Constructs [PipelineStreamLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun streamLambda(lambda: PipelineStreamLambda): PipelineContextLambda = { ctx ->
         val inStream = ProcessChannelInputStream(ctx.stdin, this.commander.scope)
         val stdStream = ProcessChannelOutputStream(ctx.stdout, this.commander.scope)

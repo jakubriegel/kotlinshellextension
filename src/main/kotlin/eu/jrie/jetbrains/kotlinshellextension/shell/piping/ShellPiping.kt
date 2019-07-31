@@ -23,7 +23,7 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
      */
     suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) {
         when (mode) {
-            ExecutionMode.ATTACHED -> pipeConfig().apply { if (!ended) toDefaultEndChannel(stdout) }
+            ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) toDefaultEndChannel(stdout) }
             ExecutionMode.DETACHED -> detach(pipeConfig)
             ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
         }
