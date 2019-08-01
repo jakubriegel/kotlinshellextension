@@ -256,10 +256,6 @@ class ShellProcessTest {
         @ExperimentalCoroutinesApi
         override val commander: ProcessCommander = commanderMock
 
-        suspend fun processKillTest(process: Process) {
-            process.kill()
-        }
-
     }
 
 }

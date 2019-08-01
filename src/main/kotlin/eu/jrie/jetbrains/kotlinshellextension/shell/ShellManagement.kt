@@ -85,6 +85,3 @@ interface ShellManagement : ShellBase {
 
 object Up
 typealias up = Up
-
-object Old
-typealias old = Old

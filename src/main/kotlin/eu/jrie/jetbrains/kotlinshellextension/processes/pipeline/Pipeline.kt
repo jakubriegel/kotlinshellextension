@@ -257,19 +257,17 @@ class Pipeline @TestOnly internal constructor (
 
     private fun ProcessExecutable.updateContext(
         newIn: ProcessReceiveChannel = this.context.stdin,
-        newOut: ProcessSendChannel = this.context.stdout,
-        newErr: ProcessSendChannel = this.context.stderr
+        newOut: ProcessSendChannel = this.context.stdout
     ) = apply {
-        this.context = PipelineExecutionContext(
-            newIn, newOut, newErr, (this.context as ProcessExecutionContext).commander
+        context = PipelineExecutionContext(
+            newIn, newOut, context.stderr, (this.context as ProcessExecutionContext).commander
         )
     }
 
     private fun ProcessExecutionContext.updated(
         newIn: ProcessReceiveChannel = this.stdin,
-        newOut: ProcessSendChannel = this.stdout,
-        newErr: ProcessSendChannel = this.stderr
-    ) = PipelineExecutionContext(newIn, newOut, newErr, commander)
+        newOut: ProcessSendChannel = this.stdout
+    ) = PipelineExecutionContext(newIn, newOut, stderr, commander)
 
     private fun InputStream.readFully(): PipelineContextLambda = { ctx ->
         use {

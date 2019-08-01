@@ -1,200 +1,147 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import java.io.PrintStream
+
+@ExperimentalCoroutinesApi
 class PipingForkIntegrationTest : PipingBaseIntegrationTest() {
 
-    //    @Test
-//    fun `should fork stderr for single process`() {
-//        // given
-//        val n = 5
-//        val code = scriptFile(n)
-//
-//        // when
-//        shell {
-//            val script = systemProcess {
-//                cmd {
-//                    cmd = "./${code.name}"
-//                }
-//            }
-//
-//            (script forkErr { it pipe storeResult }) pipe nulloutOld await all
-//        }
-//
-//        // then
-//        assertEquals(scriptStdErr(n), readResult())
-//    }
-//
-//    @Test
-//    fun `should pipe forked stderr`() {
-//        // given
-//        val n = 5
-//        val code = scriptFile(n)
-//        val pattern = "2"
-//
-//        // when
-//        shell {
-//            val script = systemProcess {
-//                cmd {
-//                    cmd = "./${code.name}"
-//                }
-//            }
-//
-//            val grep = systemProcess {
-//                cmd {
-//                    "grep" withArg pattern
-//                }
-//            }
-//
-//            (script forkErr { it pipe grep pipe storeResult }) pipe nulloutOld await all
-//        }
-//
-//        // then
-//        assertEquals(scriptStdErr(n).grep(pattern), readResult())
-//    }
-//
-//    @Test
-//    fun `should fork stderr in pipeline`() {
-//        // given
-//        val n = 5
-//        val code = scriptFile(n)
-//
-//        // when
-//        shell {
-//            val ls = systemProcess { cmd = "ls" }
-//
-//            val script = systemProcess {
-//                cmd {
-//                    cmd = "./${code.name}"
-//                }
-//            }
-//
-//            ls pipe (script forkErr { it pipe storeResult }) pipe nulloutOld await all
-//        }
-//
-//        // then
-//        assertEquals(scriptStdErr(n), readResult())
-//    }
+    @Test
+    fun `should fork stderr for single process`() {
+        // given
+        val n = 5
+        val code = scriptFile(n)
 
-//    @Test
-//    fun `should pipe stdout to process correctly after forking`() {
-//        // given
-//        val n = 5
-//        val code = scriptFile(n)
-//        val pattern = "2"
-//
-//        // when
-//        shell {
-//            val grep = systemProcess {
-//                cmd {
-//                    "grep" withArg pattern
-//                }
-//            }
-//
-//            val script = systemProcess {
-//                cmd {
-//                    cmd = "./${code.name}"
-//                }
-//            }
-//
-//            (script forkErr nulloutOld) pipe grep pipe storeResult await all
-//        }
-//
-//        // then
-//        assertEquals(scriptStdOut(n).grep(pattern), readResult())
-//    }
+        // when
+        shell {
+            val script = systemProcess {
+                cmd { cmd = "./${code.name}" }
+            }
 
-//    @Test
-//    fun `should pipe stdout to file correctly after forking`() {
-//        // given
-//        val n = 5
-//        val code = scriptFile(n)
-//        val file = file()
-//
-//        // when
-//        shell {
-//            val script = systemProcess {
-//                cmd {
-//                    cmd = "./${code.name}"
-//                }
-//            }
-//
-//            (script forkErr nulloutOld) pipe file await all
-//        }
-//
-//        // then
-//        assertEquals(scriptStdOut(n), file.readText())
-//    }
-//
+            pipeline { (script forkErr { it pipe storeResult }) pipe nullout }
+        }
 
-    ////    @Test
-////    fun `should pipe stdout to null`() {
-////        // given
-////        val outFile = file("console")
-////        System.setOut(PrintStream(outFile))
-////
-////        val n = 5
-////        val code = scriptFile(n)
-////
-////        // when
-////        shell {
-////            val script = systemProcess {
-////                cmd {
-////                    cmd = "./${code.name}"
-////                }
-////            }
-////
-////            (script forkErr { it pipe storeResult }) pipe nulloutOld await all
-////        }
-////
-////        // then
-////        assertEquals("", outFile.withoutLogs())
-////    }
-////
-////    @Test
-////    fun `should pipe stderr to null`() {
-////        // given
-////        val outFile = file("console")
-////        System.setOut(PrintStream(outFile))
-////
-////        val n = 5
-////        val code = scriptFile(n)
-////
-////        // when
-////        shell {
-////            val script = systemProcess {
-////                cmd {
-////                    cmd = "./${code.name}"
-////                }
-////            }
-////
-////            (script forkErr nulloutOld) pipe storeResult await all
-////        }
-////
-////        // then
-////        assertEquals("", outFile.withoutLogs())
-////    }
-////
-////    @Test
-////    fun `should pipe stdout and stderr to null`() {
-////        // given
-////        val outFile = file("console")
-////        System.setOut(PrintStream(outFile))
-////
-////        val n = 5
-////        val code = scriptFile(n)
-////
-////        // when
-////        shell {
-////            val script = systemProcess {
-////                cmd {
-////                    cmd = "./${code.name}"
-////                }
-////            }
-////
-////            (script forkErr nulloutOld) pipe nulloutOld await all
-////        }
-////
-////        // then
-////        assertEquals("", outFile.withoutLogs())
-////    }
+        // then
+        assertEquals(scriptStdErr(n), readResult())
+    }
 
+    @Test
+    fun `should pipe forked stderr`() {
+        // given
+        val n = 5
+        val code = scriptFile(n)
+        val pattern = "2"
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd { cmd = "./${code.name}" }
+            }
+
+            val grep = systemProcess {
+                cmd { "grep" withArg pattern }
+            }
+
+            pipeline { (script forkErr { it pipe grep pipe storeResult }) pipe nullout }
+        }
+
+        // then
+        assertEquals(scriptStdErr(n).grep(pattern), readResult())
+    }
+
+    @Test
+    fun `should pipe stdout correctly after forking`() {
+        // given
+        val n = 5
+        val code = scriptFile(n)
+        val pattern = "2"
+
+        // when
+        shell {
+            val grep = systemProcess {
+                cmd { "grep" withArg pattern }
+            }
+
+            val script = systemProcess {
+                cmd { cmd = "./${code.name}" }
+            }
+
+            (script forkErr { it pipe nullout }) pipe grep pipe storeResult await all
+        }
+
+        // then
+        assertEquals(scriptStdOut(n).grep(pattern), readResult())
+    }
+
+    @Test
+    fun `should pipe stdout to null`() {
+        // given
+        val outFile = file("console")
+        System.setOut(PrintStream(outFile))
+
+        val n = 5
+        val code = scriptFile(n)
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd { cmd = "./${code.name}" }
+            }
+
+            pipeline { (script forkErr { it pipe storeResult }) pipe nullout }
+        }
+
+        // then
+        assertEquals("", outFile.withoutLogs())
+    }
+
+    @Test
+    fun `should pipe stderr to null`() {
+        // given
+        val outFile = file("console")
+        System.setOut(PrintStream(outFile))
+
+        val n = 5
+        val code = scriptFile(n)
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd {
+                    cmd = "./${code.name}"
+                }
+            }
+
+            pipeline { (script forkErr nullout) pipe storeResult }
+        }
+
+        // then
+        assertEquals("", outFile.withoutLogs())
+    }
+
+    @Test
+    fun `should pipe stdout and stderr to null`() {
+        // given
+        val outFile = file("console")
+        System.setOut(PrintStream(outFile))
+
+        val n = 5
+        val code = scriptFile(n)
+
+        // when
+        shell {
+            val script = systemProcess {
+                cmd {
+                    cmd = "./${code.name}"
+                }
+            }
+
+            pipeline { (script forkErr nullout) pipe nullout }
+        }
+
+        // then
+        assertEquals("", outFile.withoutLogs())
+    }
 }
