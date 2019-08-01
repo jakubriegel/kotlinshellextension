@@ -39,6 +39,10 @@ interface ShellPipingThrough : ShellPipingTo {
     @ExperimentalCoroutinesApi
     infix fun Pipeline.pipe(lambda: PipelineContextLambda) = throughLambda(lambda = lambda)
 
+    /**
+     * Constructs [PipelineContextLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun contextLambda(lambda: PipelineContextLambda) = lambda
 
     /**
@@ -47,7 +51,7 @@ interface ShellPipingThrough : ShellPipingTo {
      */
     fun packetLambda(
         lambda: PipelinePacketLambda
-    ): PipelineContextLambda = { ctx ->
+    ) = contextLambda { ctx ->
         ctx.stdin.consumeEach { packet ->
             val out = lambda(packet)
             ctx.stdout.send(out.first)
@@ -107,7 +111,7 @@ interface ShellPipingThrough : ShellPipingTo {
      * Constructs [PipelineStreamLambda] to be used in piping
      * Part of piping DSL
      */
-    fun streamLambda(lambda: PipelineStreamLambda): PipelineContextLambda = { ctx ->
+    fun streamLambda(lambda: PipelineStreamLambda) = contextLambda { ctx ->
         val inStream = ProcessChannelInputStream(ctx.stdin, this.commander.scope)
         val stdStream = ProcessChannelOutputStream(ctx.stdout, this.commander.scope)
         val errStream = ProcessChannelOutputStream(ctx.stderr, this.commander.scope)
