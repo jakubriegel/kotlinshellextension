@@ -1,30 +1,23 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.process.system
 
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.PCB
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import kotlinx.io.core.BytePacketBuilder
-import kotlinx.io.core.ByteReadPacket
-import kotlinx.io.core.readBytes
+import kotlinx.io.streams.inputStream
 import org.jetbrains.annotations.TestOnly
 import org.zeroturnaround.exec.ProcessExecutor
-import org.zeroturnaround.exec.listener.ProcessListener
 import org.zeroturnaround.exec.stream.LogOutputStream
 import java.io.File
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
@@ -35,23 +28,23 @@ class SystemProcess @TestOnly internal constructor (
     val arguments: List<String>,
     environment: Map<String, String>,
     directory: File,
-    stdinBuffer: ProcessIOBuffer?,
-    stdoutBuffer: ProcessIOBuffer?,
-    stderrBuffer: ProcessIOBuffer?,
+    stdin: ProcessReceiveChannel,
+    stdout: ProcessSendChannel,
+    stderr: ProcessSendChannel,
     scope: CoroutineScope,
     private val executor: ProcessExecutor
-) : Process(vPID, environment, directory, stdinBuffer, stdoutBuffer, stderrBuffer, scope) {
+) : Process(vPID, environment, directory, stdin, stdout, stderr, scope) {
 
     constructor(vPID: Int,
                 command: String,
                 arguments: List<String>,
                 environment: Map<String, String>,
                 directory: File,
-                stdinBuffer: ProcessIOBuffer?,
-                stdoutBuffer: ProcessIOBuffer?,
-                stderrBuffer: ProcessIOBuffer?,
+                stdin: ProcessReceiveChannel,
+                stdout: ProcessSendChannel,
+                stderr: ProcessSendChannel,
                 scope: CoroutineScope
-    ) : this(vPID, command, arguments, environment, directory, stdinBuffer, stdoutBuffer, stderrBuffer, scope, ProcessExecutor())
+    ) : this(vPID, command, arguments, environment, directory, stdin, stdout, stderr, scope, ProcessExecutor())
 
     override val pcb = SystemPCB()
 
@@ -67,36 +60,30 @@ class SystemProcess @TestOnly internal constructor (
     init {
         executor
             .command(listOf(command).plus(arguments))
-            .destroyOnExit()
-            .addListener(SystemProcessListener(this))
             .redirectInput()
             .redirectOutput()
             .environment(environment)
             .directory(directory)
     }
 
-    override fun execute(): PCB {
+    @ObsoleteCoroutinesApi
+    override suspend fun execute() = wrapThread("${this}_execution_thread") {
         val started = executor.start()!!
-
         pcb.startTime = started.process.info().startInstant().orElse(Instant.now())
         pcb.systemPID = started.process.pid()
         pcb.startedProcess = started
-
-        return pcb
-    }
-
-    override fun isAlive() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
+    } .join()
 
     @ObsoleteCoroutinesApi
-    override suspend fun expect(timeout: Long) {
-        withContext(Dispatchers.Default) {
-            with(pcb.startedProcess!!) {
-                val result = if (timeout.compareTo(0) == 0) future.get()
-                else future.get(timeout, TimeUnit.MILLISECONDS)
-                pcb.exitCode = result.exitValue
-            }
+    override suspend fun expect(timeout: Long) = wrapThread("${this}_expect_thread") {
+        with(pcb.startedProcess!!) {
+            val result = if (timeout.compareTo(0) == 0) future.get()
+            else future.get(timeout, TimeUnit.MILLISECONDS)
+            pcb.exitCode = result.exitValue
         }
-    }
+    } .join()
+
+    override fun isRunning() = if (pcb.startedProcess != null ) pcb.startedProcess!!.process.isAlive else false
 
     override fun destroy() {
         if(isAlive()) {
@@ -107,20 +94,17 @@ class SystemProcess @TestOnly internal constructor (
         }
     }
 
-    override fun toString() = name
-
     internal class SystemProcessLogOutputStream (
-        private val sink: ProcessSendChannel,
+        private val out: ProcessSendChannel,
         private val scope: CoroutineScope
     ) : LogOutputStream() {
         override fun processLine(line: String?) {
             if (line != null) {
                 BytePacketBuilder()
-                    .append(line.plus('\n'))
+                    .append(line)
+                    .append('\n')
                     .build()
-                    .also {
-                        runBlocking(scope.coroutineContext) { sink.send(it) }
-                    }
+                    .also { runBlocking(scope.coroutineContext) { out.send(it) } }
             }
         }
     }
@@ -130,62 +114,74 @@ class SystemProcess @TestOnly internal constructor (
         private val scope: CoroutineScope
     ) : InputStream() {
 
-        private val buffer = Channel<Byte>(UNLIMITED)
+        private val buffer = ByteBuffer.allocate(INPUT_STREAM_BUFFER_SIZE).apply { flip() }
 
-        init {
-            scope.launch { bufferData() }
-        }
+        private var stream: InputStream? = null
 
         override fun read(): Int {
-            return try {
-                runBlocking(scope.coroutineContext) { buffer.receive().toInt() }
+            if (!buffer.hasRemaining()) {
+                try {
+                    receive()
+                } catch (e: ClosedReceiveChannelException) {
+                    buffer.put(MINUS_ONE)
+                    buffer.flip()
+                }
             }
-            catch (e: ClosedReceiveChannelException) {
+
+            val b = buffer.get().toInt()
+            if (b == -1) {
                 close()
-                -1
+            }
+            return b
+        }
+
+        private fun receive() {
+            buffer.clear()
+            if (stream == null) {
+                val packet = runBlocking (scope.coroutineContext) { tap.receive() }
+                stream = packet.inputStream()
+            }
+            readStream()
+            buffer.flip()
+        }
+
+        private fun readStream() {
+            stream!!.let {
+                while (buffer.position() < INPUT_STREAM_BUFFER_SIZE) {
+                    val b = it.read().toByte()
+                    if (b == MINUS_ONE) break
+                    else buffer.put(b)
+                }
+                if (it.available() == 0) {
+                    stream = null
+                    it.close()
+                }
             }
         }
 
-        private suspend fun bufferData() {
-            tap.consumeEach { bufferData(it) }
-            buffer.close()
-        }
-
-        private suspend fun bufferData(packet: ByteReadPacket) {
-            packet.readBytes().forEach {
-                buffer.send(it)
-            }
-        }
-
-    }
-
-    class SystemProcessListener (
-        private val process: SystemProcess
-    ) : ProcessListener() {
-        override fun afterStop(process: java.lang.Process?) = finalizeProcess()
-
-        private fun finalizeProcess() {
-            logger.debug("finalizing $process}")
-            process.closeOut()
-            logger.debug("finalized $process}")
+        companion object {
+            private const val MINUS_ONE: Byte = -1
         }
     }
 
     private fun ProcessExecutor.redirectInput() = apply {
-        if (stdin != null) redirectInput(SystemProcessInputStream(stdin, scope))
+        redirectInput(SystemProcessInputStream(stdin, scope))
     }
 
     private fun ProcessExecutor.redirectOutput() = apply {
-        when (stderr) {
-            null -> redirectStdOut()
-            else -> {
-                redirectStdOut()
-                redirectStdErr()
-            }
-        }
+        redirectStdOut()
+        redirectStdErr()
     }
 
     private fun ProcessExecutor.redirectStdOut() = redirectOutput(SystemProcessLogOutputStream(stdout, scope))
 
-    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr!!, scope))
+    private fun ProcessExecutor.redirectStdErr() = redirectError(SystemProcessLogOutputStream(stderr, scope))
+
+    @ObsoleteCoroutinesApi
+    private fun wrapThread(name: String, block: () -> Unit) = scope.launch(newSingleThreadContext(name)) { block() }
+
+    companion object {
+        private const val INPUT_STREAM_BUFFER_SIZE = 512
+    }
+
 }

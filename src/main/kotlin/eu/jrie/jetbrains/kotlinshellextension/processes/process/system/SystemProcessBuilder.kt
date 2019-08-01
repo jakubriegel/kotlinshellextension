@@ -15,16 +15,9 @@ class SystemProcessBuilder (
         arguments,
         environment,
         directory,
-        stdinBuffer,
-        stdoutBuffer,
-        stderrBuffer,
+        stdin,
+        stdout,
+        stderr,
         scope
     )
-
-    companion object {
-        fun fromCommandLine(commandLine: String): ProcessBuilder {
-            val separated = commandLine.split(" ")
-            return SystemProcessBuilder(separated.first() , separated.drop(1))
-        }
-    }
 }

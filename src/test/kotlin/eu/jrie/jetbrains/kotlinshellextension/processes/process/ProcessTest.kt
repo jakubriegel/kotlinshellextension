@@ -6,10 +6,13 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.io.File
@@ -17,7 +20,7 @@ import java.io.File
 @ExperimentalCoroutinesApi
 class ProcessTest {
 
-    private lateinit var process: Process// = spyk<SampleProcess>()
+    private lateinit var process: Process
 
     @Test
     fun `should start process`() {
@@ -30,16 +33,15 @@ class ProcessTest {
 
     @ParameterizedTest(name = "{index} {0} should throw exception when tried to start not READY process")
     @EnumSource(ProcessState::class)
-    fun `should throw exception when tried to start not READY process`(state: ProcessState) {
-        runTest {
-            // given
-            process.pcb.state = state
+    fun `should throw exception when tried to start not READY process`(state: ProcessState) = runTest {
+        // given
+        process.pcb.state = state
 
-            // when
-            if (state != ProcessState.READY) {
-                // then
-                assertThrows<Exception> { process.start() }
-            }
+        // when
+        if (state != ProcessState.READY) {
+            // expect
+            val e  = runCatching { process.start() }
+            assertEquals(Exception::class, e.exceptionOrNull()!!::class)
         }
     }
 
@@ -51,7 +53,6 @@ class ProcessTest {
         runTest {
             every { process.isAlive() } returns true
 
-            process.closeOut()
             process.await(timeout)
         }
 
@@ -70,29 +71,64 @@ class ProcessTest {
         assertEquals(ProcessState.TERMINATED, process.pcb.state)
     }
 
-    private fun runTest(test: suspend ProcessTest.() -> Unit) = runBlocking {
-        process = spyk(SampleProcess(this))
-        test()
-        process.closeOut()
+    @Test
+    fun `should get process name`() {
+        // when
+        runTest { /* initialize the process */ }
+        val name = process.name
+        val string = process.toString()
+
+        // then
+        // TODO: assertEquals(name, string())
     }
 
-    private open class SampleProcess (
+    @Test
+    fun `should return true if process finished executing but state is still RUNNING`() {
+        // when
+        val result = runTest {
+            process.pcb.state = ProcessState.RUNNING
+            process.isAlive()
+        }
+
+        // then
+        assertTrue(result)
+    }
+
+    @Test
+    fun `should return false if process state is not RUNNING and process finished executing`() {
+        // when
+        val result = runTest {
+            process.pcb.state = ProcessState.TERMINATED
+            process.isAlive()
+        }
+
+        // then
+        assertFalse(result)
+    }
+
+    private fun <T> runTest(test: suspend ProcessTest.() -> T): T = runBlocking {
+        process = spyk(SampleProcess(this))
+        val result = test()
+        result
+    }
+
+    private class SampleProcess (
         scope: CoroutineScope
     ) : Process(
         VIRTUAL_PID,
         ENVIRONMENT,
         File(""),
-        null,
-        null,
-        null,
+        Channel(),
+        Channel(),
+        Channel(),
         scope
     ) {
         override val pcb: PCB = spyk()
         override val statusCmd = ""
         override val statusOther = ""
 
-        override fun execute(): PCB = spyk()
-        override fun isAlive(): Boolean = false
+        override suspend fun execute() = delay(1)
+        override fun isRunning(): Boolean = false
         override suspend fun expect(timeout: Long) {}
         override fun destroy() {}
     }

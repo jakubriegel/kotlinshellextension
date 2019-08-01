@@ -1,6 +1,5 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
-import eu.jrie.jetbrains.kotlinshellextension.shell
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
@@ -18,7 +17,7 @@ class ShellCreationIntegrationTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `should create Shell with given scope`() = runBlocking {
-        shell (
+        shell(
             scope = this
         ) {
             /* script */

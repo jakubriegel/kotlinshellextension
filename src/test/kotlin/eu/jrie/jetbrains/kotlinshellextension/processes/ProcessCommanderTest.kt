@@ -2,7 +2,6 @@ package eu.jrie.jetbrains.kotlinshellextension.processes
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcess
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemProcessBuilder
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_COMMAND
 import eu.jrie.jetbrains.kotlinshellextension.testutils.TestDataFactory.PROCESS_NAME
@@ -18,10 +17,11 @@ import io.mockk.verify
 import io.mockk.verifyOrder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 @ExperimentalCoroutinesApi
 class ProcessCommanderTest {
@@ -34,11 +34,10 @@ class ProcessCommanderTest {
         // given
         val scope = this
         val c = ProcessCommander(scope)
-        val builder = spyk(SystemProcessBuilder(PROCESS_COMMAND))
+        val builder = spyk(SystemProcessBuilder(PROCESS_COMMAND)).withChannels()
 
         // when
         val process = c.createProcess(builder)
-        process.closeOut()
 
         // then
         verifyOrder {
@@ -54,14 +53,12 @@ class ProcessCommanderTest {
     fun `should assign unique vPID to process`() = runBlocking {
         // given
         val c = ProcessCommander(this)
-        val builder1 = spyk(SystemProcessBuilder(PROCESS_COMMAND))
-        val builder2 = spyk(SystemProcessBuilder(PROCESS_COMMAND))
+        val builder1 = spyk(SystemProcessBuilder(PROCESS_COMMAND)).withChannels()
+        val builder2 = spyk(SystemProcessBuilder(PROCESS_COMMAND)).withChannels()
 
         // when
         val process1 = c.createProcess(builder1)
         val process2 = c.createProcess(builder2)
-        process1.closeOut()
-        process2.closeOut()
 
         // then
         verify (exactly = 1) {
@@ -74,10 +71,10 @@ class ProcessCommanderTest {
     }
 
     @Test
-    fun `should start process`() {
+    fun `should start process`() = runBlocking {
         // given
         val processMock = mockk<Process> {
-            every { start() } returns mockk()
+            coEvery { start() } returns mockk()
             every { vPID } returns VIRTUAL_PID
         }
 
@@ -85,28 +82,7 @@ class ProcessCommanderTest {
         commander.startProcess(processMock)
 
         // then
-        verify (exactly = 1) { processMock.start() }
-
-    }
-
-    @Test
-    fun `should start process by vPID`() {
-        // given
-        val processMock = mockk<SystemProcess> {
-            every { start() } returns mockk()
-            every { vPID } returns VIRTUAL_PID
-        }
-
-        val builderSpy = spyk<ProcessBuilder> {
-            every { build() } returns processMock
-        }
-        commander.createProcess(builderSpy)
-
-        // when
-        commander.startProcess(VIRTUAL_PID)
-
-        // then
-        verify (exactly = 1) { processMock.start() }
+        coVerify (exactly = 1) { processMock.start() }
 
     }
 
@@ -128,29 +104,6 @@ class ProcessCommanderTest {
 
         // when
         c.awaitProcess(processMock, timeout)
-
-        // then
-        coVerify (exactly = 1) { processMock.await(timeout) }
-    }
-
-    @Test
-    fun `should await process by vPID`() = runBlocking {
-        // given
-        val c = ProcessCommander(this)
-        val timeout: Long = 500
-        val processMock = mockk<Process> {
-            coEvery { await(timeout) } just runs
-            every { vPID } returns VIRTUAL_PID
-            every { name } returns PROCESS_NAME
-        }
-
-        val builderSpy = spyk<ProcessBuilder> {
-            every { build() } returns processMock
-        }
-        c.createProcess(builderSpy)
-
-        // when
-        c.awaitProcess(VIRTUAL_PID, timeout)
 
         // then
         coVerify (exactly = 1) { processMock.await(timeout) }
@@ -197,11 +150,11 @@ class ProcessCommanderTest {
         // given
         val c = ProcessCommander(this)
         val processMock1 = mockk<Process> {
-            coEvery { await() } just runs
+            coEvery { await(0) } just runs
             every { name } returns PROCESS_NAME
         }
         val processMock2 = mockk<Process> {
-            coEvery { await() } just runs
+            coEvery { await(0) } just runs
             every { name } returns PROCESS_NAME
         }
 
@@ -220,8 +173,8 @@ class ProcessCommanderTest {
 
         // then
         coVerify (exactly = 1) {
-            processMock1.await()
-            processMock2.await()
+            processMock1.await(0)
+            processMock2.await(0)
         }
     }
 
@@ -230,40 +183,19 @@ class ProcessCommanderTest {
         // given
         val c = ProcessCommander(this)
         val processMock = mockk<Process> {
-            every { kill() } just runs
+            coEvery { kill() } just runs
         }
 
         val builderSpy = spyk<ProcessBuilder> {
             every { build() } returns processMock
         }
-        c.createProcess(builderSpy)
+        c.createProcess(builderSpy.withChannels())
 
         // when
         c.killProcess(processMock)
 
         // then
-        verify (exactly = 1) { processMock.kill() }
-    }
-
-    @Test
-    fun `should kill process by vPID`() = runBlocking {
-        // given
-        val c = ProcessCommander(this)
-        val processMock = mockk<Process> {
-            every { kill() } just runs
-            every { vPID } returns VIRTUAL_PID
-        }
-
-        val builderSpy = spyk<ProcessBuilder> {
-            every { build() } returns processMock
-        }
-        c.createProcess(builderSpy)
-
-        // when
-        c.killProcess(VIRTUAL_PID)
-
-        // then
-        verify (exactly = 1) { processMock.kill() }
+        coVerify (exactly = 1) { processMock.kill() }
     }
 
     @Test
@@ -271,30 +203,16 @@ class ProcessCommanderTest {
         // given
         val c = ProcessCommander(this)
         val processMock = mockk<Process> {
-            every { kill() } just runs
+            coEvery { kill() } just runs
         }
 
         // when
-        assertThrows<Exception> { c.killProcess(processMock) }
+        val e = runCatching { c.killProcess(processMock) }
+            .exceptionOrNull()!!
 
         // then
-        verify (exactly = 0) { processMock.kill() }
-    }
-
-    @Test
-    fun `should throw exception when kill unknown process by vPID`() = runBlocking {
-        // given
-        val c = ProcessCommander(this)
-        val processMock = mockk<Process> {
-            every { kill() } just runs
-            every { vPID } returns VIRTUAL_PID
-        }
-
-        // when
-        assertThrows<Exception> { c.killProcess(VIRTUAL_PID) }
-
-        // then
-        verify (exactly = 0) { processMock.kill() }
+        coVerify (exactly = 0) { processMock.kill() }
+        assertEquals(Exception::class, e::class)
     }
 
     @Test
@@ -302,10 +220,10 @@ class ProcessCommanderTest {
         // given
         val c = ProcessCommander(this)
         val processMock1 = mockk<Process> {
-            every { kill() } just runs
+            coEvery { kill() } just runs
         }
         val processMock2 = mockk<Process> {
-            every { kill() } just runs
+            coEvery { kill() } just runs
         }
 
         val builder1 = spyk<ProcessBuilder> {
@@ -315,16 +233,22 @@ class ProcessCommanderTest {
             every { build() } returns processMock2
         }
 
-        c.createProcess(builder1)
-        c.createProcess(builder2)
+        c.createProcess(builder1.withChannels())
+        c.createProcess(builder2.withChannels())
 
         // when
         c.killAll()
 
         // then
-        verify (exactly = 1) {
+        coVerify (exactly = 1) {
             processMock1.kill()
             processMock2.kill()
         }
+    }
+
+    private fun ProcessBuilder.withChannels() = apply {
+        withStdin(Channel())
+        withStdout(Channel())
+        withStderr(Channel())
     }
 }

@@ -1,27 +1,31 @@
 package eu.jrie.jetbrains.kotlinshellextension.processes.pipeline
 
-import eu.jrie.jetbrains.kotlinshellextension.ShellPiping
 import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ExecutionContext
+import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutable
+import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutionContext
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessBuilder
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessIOBuffer
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.ShellPiping
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.io.core.BytePacketBuilder
 import kotlinx.io.core.ByteReadPacket
 import kotlinx.io.streams.readPacketAtMost
 import kotlinx.io.streams.writePacket
-import java.io.File
-import java.io.FileOutputStream
+import org.jetbrains.annotations.TestOnly
+import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.io.OutputStream
 
-typealias PipelineLambda = (ByteReadPacket) -> Unit
+typealias PipelineContextLambda = suspend (context: ExecutionContext) -> Unit
 
 /**
  * The entity representing pipeline.
@@ -30,13 +34,25 @@ typealias PipelineLambda = (ByteReadPacket) -> Unit
  * @see ShellPiping
  */
 @ExperimentalCoroutinesApi
-class Pipeline private constructor (
-    private val commander: ProcessCommander
+class Pipeline @TestOnly internal constructor (
+    private val context: ProcessExecutionContext
 ) {
+    /**
+     * Indicates wheater this [Pipeline] has ending element.
+     * If `true` [Pipeline] cannot be appended.
+     *
+     * @see Pipeline.toEndLambda
+     * @see Pipeline.toEndChannel
+     * @see Pipeline.toEndPacket
+     * @see Pipeline.toEndStream
+     * @see Pipeline.toEndStringBuilder
+     */
+    var closed = false
+        private set
 
     private val processLine = mutableListOf<Process>()
 
-    private lateinit var lastBuffer: ProcessIOBuffer
+    private lateinit var lastOut: ProcessReceiveChannel
 
     private val asyncJobs = mutableListOf<Job>()
 
@@ -48,121 +64,119 @@ class Pipeline private constructor (
         get() = processLine.toList()
 
     /**
-     * Starts new [Pipeline] with process specified by given [ProcessBuilder]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(process: ProcessBuilder, commander: ProcessCommander) : this(commander) {
-        addProcess(process)
-    }
-
-    /**
-     * Starts new [Pipeline] with [file]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(file: File, commander: ProcessCommander) : this(file.inputStream(), commander)
-
-    /**
-     * Starts new [Pipeline] with [string]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(string: String, commander: ProcessCommander) : this(string.byteInputStream(), commander)
-
-    private constructor(stream: InputStream, commander: ProcessCommander) : this(commander) {
-        val buffer = buffer()
-        val channel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
-        launch { buffer.consumeFrom(channel) }
-        launch {
-            stream.use {
-                while (it.available() > 0) {
-                    val packet = it.readPacketAtMost(STREAM_RW_PACKET_SIZE)
-                    channel.send(packet)
-                }
-                channel.close()
-            }
-        }
-    }
-
-    /**
-     * Starts new [Pipeline] with given [buffer] as start
-     *
-     * @see ShellPiping
-     */
-    internal constructor(buffer: ProcessIOBuffer, commander: ProcessCommander) : this(commander) {
-        lastBuffer = buffer
-    }
-
-    /**
      * Adds [process] to this [Pipeline]
      *
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun toProcess(process: ProcessBuilder) = apply {
-        addProcess(process.withStdinBuffer(lastBuffer))
+    suspend fun throughProcess(process: ProcessExecutable) = apply {
+        addProcess(process.updateContext(newIn = lastOut))
     }
 
-    private fun addProcess(process: ProcessBuilder) = apply {
-        processLine.add(
-            commander.createProcess(
-                process.withStdoutBuffer(buffer())
-            ).also { commander.startProcess(it) }
-        )
-    }
-
-    /**
-     * Ends this [Pipeline] with [lambda]
-     *
-     * @see ShellPiping
-     * @return this [Pipeline]
-     */
-    fun toLambda(lambda: PipelineLambda) = apply {
-        val lambdaChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
-        launch { lastBuffer.receiveTo(lambdaChannel) }
-        launch { lambdaChannel.consumeEach(lambda) }
-    }
-
-    /**
-     * Ends this [Pipeline] with writing its output to [file]
-     *
-     * @see ShellPiping
-     * @return this [Pipeline]
-     */
-    fun toFile(file: File) = apply { writeFile(file, false) }
-
-    /**
-     * Ends this [Pipeline] with appending its output to [file]
-     *
-     * @see ShellPiping
-     * @return this [Pipeline]
-     */
-    fun appendFile(file: File) = apply { writeFile(file, true) }
-
-    private fun writeFile(file: File, append: Boolean) {
-        val fileWriteChannel: ProcessChannel = Channel(STREAM_RW_CHANNEL_BUFFER_SIZE)
-        launchIO {
-            FileOutputStream(file, append).use {
-                fileWriteChannel.consumeEach { p ->
-                    it.writePacket(p)
-                    it.flush()
-                }
-                it.close()
+    private suspend fun addProcess(executable: ProcessExecutable) = ifNotEnded {
+        executable.updateContext(newOut = channel())
+            .apply {
+                init()
+                exec()
             }
+
+        launch {
+            executable.await()
+            executable.context.stdout.close()
         }
-        launch { lastBuffer.receiveTo(fileWriteChannel) }
+
+        processLine.add(executable.process)
     }
 
     /**
-     * Awaits all processes in this [Pipeline]
+     * Adds [lambda] to this [Pipeline]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun throughLambda(end: Boolean = false, closeOut: Boolean = true, lambda: PipelineContextLambda) = apply {
+        addLambda(lambda, context.updated(newIn = lastOut), end, closeOut)
+    }
+
+    private suspend fun addLambda(
+        lambda: PipelineContextLambda,
+        lambdaContext: PipelineExecutionContext = PipelineExecutionContext(context),
+        end: Boolean,
+        closeOut: Boolean
+    ) = ifNotEnded {
+        lambdaContext
+            .let { if (!end) it.updated(newOut = channel()) else it }
+            .let { ctx ->
+                launch {
+                    lambda(ctx)
+                    if (closeOut) ctx.stdout.close()
+                }
+            }
+    }
+
+    private suspend fun toEndLambda(
+        closeOut: Boolean = false, lambda: suspend (ByteReadPacket) -> Unit
+    ) = toEndLambda(closeOut, lambda, {})
+
+    private suspend fun toEndLambda(
+        closeOut: Boolean = false, lambda: suspend (ByteReadPacket) -> Unit, finalize: () -> Unit
+    ) = apply {
+        throughLambda(end = true, closeOut = closeOut) { ctx ->
+            ctx.stdin.consumeEach { lambda(it) }
+            finalize()
+        }
+        closed = true
+    }
+
+    /**
+     * Ends this [Pipeline] with [channel]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun toEndChannel(channel: ProcessSendChannel) = toEndLambda (
+        true,
+        { channel.send(it) },
+        { channel.close() }
+    )
+
+    internal suspend fun toDefaultEndChannel(channel: ProcessSendChannel) = toEndLambda { channel.send(it) }
+
+    /**
+     * Ends this [Pipeline] with [packetBuilder]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun toEndPacket(packetBuilder: BytePacketBuilder) = toEndLambda { packetBuilder.writePacket(it) }
+
+    /**
+     * Ends this [Pipeline] with [stream]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun toEndStream(stream: OutputStream) = toEndLambda { stream.writePacket(it) }
+
+    /**
+     * Ends this [Pipeline] with [stringBuilder]
+     *
+     * @see ShellPiping
+     * @return this [Pipeline]
+     */
+    suspend fun toEndStringBuilder(stringBuilder: StringBuilder) = toEndLambda { stringBuilder.append(it.readText()) }
+
+    /**
+     * Awaits all processes and jobs in this [Pipeline]
      *
      * @see ShellPiping
      * @return this [Pipeline]
      */
     suspend fun await() = apply {
-        processLine.forEach { commander.awaitProcess(it) }
+        logger.debug("awaiting pipeline $this")
+        processLine.forEach { context.commander.awaitProcess(it) }
         asyncJobs.forEach { it.join() }
+        logger.debug("awaited pipeline $this")
     }
 
     /**
@@ -172,26 +186,95 @@ class Pipeline private constructor (
      * @return this [Pipeline]
      */
     suspend fun kill() = apply {
-        processLine.forEach { commander.killProcess(it) }
-        asyncJobs.forEach { it.join() }
+        logger.debug("killing pipeline $this")
+        processLine.forEach { context.commander.killProcess(it) }
+        asyncJobs.forEach { it.cancelAndJoin() }
+        logger.debug("killed pipeline $this")
     }
 
     /**
-     * Returns new [ProcessIOBuffer] and sets it as [lastBuffer]
+     * Returns new [ProcessSendChannel] and sets it as [lastOut]
      */
-    private fun buffer() = ProcessIOBuffer().also { lastBuffer = it }
-
-    private fun launchIO(ioBlock: suspend CoroutineScope.() -> Unit) = launch {
-        withContext(Dispatchers.IO, ioBlock)
-    }
+    private fun channel(): ProcessSendChannel = Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also { lastOut = it }
 
     private fun launch(block: suspend CoroutineScope.() -> Unit) {
-        asyncJobs.add(commander.scope.launch(block = block))
+        asyncJobs.add(context.commander.scope.launch(block = block))
+    }
+
+    private suspend fun ifNotEnded(block: suspend () -> Unit) {
+        if (closed) throw Exception("Pipeline closed")
+        else block()
     }
 
     companion object {
-        private const val STREAM_RW_PACKET_SIZE: Long = 256
-        private const val STREAM_RW_CHANNEL_BUFFER_SIZE = 16
+        private const val PIPELINE_CHANNEL_PACKET_SIZE: Long = 256
+        private const val PIPELINE_CHANNEL_BUFFER_SIZE = 16
+
+        /**
+         * Starts new [Pipeline] with process specified by given [ProcessExecutable]
+         *
+         * @see ShellPiping
+         */
+        internal suspend fun fromProcess(process: ProcessExecutable, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { addProcess(process) }
+
+        /**
+         * Starts new [Pipeline] with [lambda]
+         *
+         * @see ShellPiping
+         */
+        internal suspend fun fromLambda(lambda: PipelineContextLambda, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { addLambda(lambda, end = false, closeOut = true) }
+
+        /**
+         * Starts new [Pipeline] with [channel]
+         *
+         * @see ShellPiping
+         */
+        internal fun fromChannel(channel: ProcessReceiveChannel, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { lastOut = channel }
+
+        /**
+         * Starts new [Pipeline] with given [stream]
+         *
+         * @see ShellPiping
+         */
+        internal suspend fun fromStream(stream: InputStream, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { addLambda(stream.readFully(), end = false, closeOut = true) }
+
+        private val logger = LoggerFactory.getLogger(Pipeline::class.java)
     }
 
+    private class PipelineExecutionContext (
+        override val stdin: ProcessReceiveChannel,
+        override val stdout: ProcessSendChannel,
+        override val stderr: ProcessSendChannel,
+        override val commander: ProcessCommander
+    ) : ProcessExecutionContext {
+        constructor(context: ProcessExecutionContext)
+                : this(context.stdin, context.stdout, context.stderr, context.commander)
+    }
+
+    private fun ProcessExecutable.updateContext(
+        newIn: ProcessReceiveChannel = this.context.stdin,
+        newOut: ProcessSendChannel = this.context.stdout
+    ) = apply {
+        context = PipelineExecutionContext(
+            newIn, newOut, context.stderr, (this.context as ProcessExecutionContext).commander
+        )
+    }
+
+    private fun ProcessExecutionContext.updated(
+        newIn: ProcessReceiveChannel = this.stdin,
+        newOut: ProcessSendChannel = this.stdout
+    ) = PipelineExecutionContext(newIn, newOut, stderr, commander)
+
+    private fun InputStream.readFully(): PipelineContextLambda = { ctx ->
+        use {
+            do {
+                val packet = it.readPacketAtMost(PIPELINE_CHANNEL_PACKET_SIZE)
+                ctx.stdout.send(packet)
+            } while (packet.remaining == PIPELINE_CHANNEL_PACKET_SIZE)
+        }
+    }
 }

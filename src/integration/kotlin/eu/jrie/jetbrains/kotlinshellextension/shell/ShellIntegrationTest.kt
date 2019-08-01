@@ -1,9 +1,8 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
-import eu.jrie.jetbrains.kotlinshellextension.all
-import eu.jrie.jetbrains.kotlinshellextension.nullout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -20,7 +19,7 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
         shell (
             dir = givenDir
         ) {
-            systemProcess { cmd = "ls" } pipe storeResult
+            pipeline { "ls".process() pipe storeResult }
         }
 
         // then
@@ -41,14 +40,8 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
         shell (
             env = env
         ) {
-
-            systemProcess {
-                cmd {
-                    "chmod" withArgs listOf("+x", file.name)
-                }
-            } pipe nullout await all
-
-            systemProcess { cmd = "./${file.name}" } pipe storeResult
+            "chmod +x ${file.name}"()
+            "./${file.name}".process() pipe storeResult
         }
 
         // then
@@ -80,9 +73,7 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
         // when
         shell {
             shell {
-                systemProcess {
-                    cmd { "echo" withArg "hello" }
-                } pipe storeResult
+                pipeline { "echo hello".process() pipe storeResult }
             }
         }
 
@@ -105,7 +96,7 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
             dir = givenDir
         ) {
             shell (dir = subDir) {
-                systemProcess { cmd = "ls" } pipe storeResult
+                "ls".process() pipe storeResult
             }
         }
 
@@ -130,21 +121,111 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
             env = env
         ) {
 
-            systemProcess {
-                cmd {
-                    "chmod" withArgs listOf("+x", file.name)
-                }
-            } pipe nullout await all
+            "chmod +x ${file.name}"()
 
             shell (
                 env = newEnv
             ) {
-                systemProcess { cmd = "./${file.name}" } pipe storeResult
+                "./${file.name}".process() pipe storeResult
             }
         }
 
         // then
         assertEquals("$newValue\n", readResult())
+    }
+
+    @Test
+    fun `should create sub shell with inherited environment`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+        val env = mapOf(variable to value)
+
+        val code = "echo \$$variable"
+        val file = file(content = code)
+
+        // when
+        shell (
+            env = env
+        ) {
+
+            "chmod +x ${file.name}"()
+
+            shell {
+                "./${file.name}".process() pipe storeResult
+            }
+        }
+
+        // then
+        assertEquals("$value\n", readResult())
+    }
+
+    @Test
+    fun `should create sub shell with empty variables`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+
+        var empty: Boolean? = null
+
+        // when
+        shell {
+            variable(variable to value)
+            shell {
+                empty = variables.isEmpty()
+            }
+        }
+
+        // then
+        assertTrue(empty!!)
+    }
+
+    @Test
+    fun `should add environment variable`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+
+        val code = "echo \$$variable"
+        val file = file(content = code)
+
+        // when
+        shell {
+
+            export(variable to value)
+
+            "chmod +x ${file.name}"()
+
+            shell {
+                "./${file.name}".process() pipe storeResult
+            }
+        }
+
+        // then
+        assertEquals("$value\n", readResult())
+    }
+
+    @Test
+    fun `should add shell variable`() {
+        // given
+        val variable = "VARIABLE"
+        val value = "value"
+
+        val code = "echo \$$variable"
+        val file = file(content = code)
+
+        // when
+        shell {
+
+            variable(variable to value)
+
+            "chmod +x ${file.name}"()
+
+            "./${file.name}".process() pipe storeResult
+        }
+
+        // then
+        assertEquals("$value\n", readResult())
     }
 
     @Test

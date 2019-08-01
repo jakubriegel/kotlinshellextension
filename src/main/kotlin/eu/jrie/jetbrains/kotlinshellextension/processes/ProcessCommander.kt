@@ -11,9 +11,9 @@ class ProcessCommander internal constructor (
     val scope: CoroutineScope
 ) {
 
-    private val processes = mutableSetOf<Process>()
+    internal val processes = mutableSetOf<Process>()
 
-    fun createProcess(builder: ProcessBuilder): Process {
+    internal fun createProcess(builder: ProcessBuilder): Process {
         return builder
             .withVirtualPID(virtualPID())
             .withScope(scope)
@@ -21,46 +21,34 @@ class ProcessCommander internal constructor (
             .also { processes.add(it) }
     }
 
-    fun startProcess(vPID: Int) = startProcess(getProcessByVirtualPID(vPID))
-
-    fun startProcess(process: Process) {
+    internal suspend fun startProcess(process: Process) {
         process.start()
+        logger.debug("started $process")
     }
 
-    suspend fun awaitProcess(vPID: Int, timeout: Long = 0) {
-        awaitProcess(getProcessByVirtualPID(vPID), timeout)
-    }
-
-    suspend fun awaitProcess(process: Process, timeout: Long = 0) {
+    internal suspend fun awaitProcess(process: Process, timeout: Long = 0) {
         logger.debug("awaiting process ${process.name}")
         if (!processes.contains(process)) throw Exception("unknown process")
         process.await(timeout)
         logger.debug("awaited process ${process.name}")
     }
 
-    suspend fun awaitAll() {
+    internal suspend fun awaitAll() {
         logger.debug("awaiting all processes")
         processes.forEach { awaitProcess(it) }
         logger.debug("all processes awaited")
     }
 
-    fun killProcess(vPID: Int) {
-        killProcess(getProcessByVirtualPID(vPID))
-    }
-
-    fun killProcess(process: Process) {
+    internal suspend fun killProcess(process: Process) {
         if (!processes.contains(process)) throw Exception("unknown process")
         process.kill()
     }
 
-    fun killAll() {
+    internal suspend fun killAll() {
         logger.debug("killing all processes")
         processes.forEach { killProcess(it) }
         logger.debug("all processes killed")
     }
-
-    private fun getProcessByVirtualPID(vPID: Int) =
-        processes.find { it.vPID == vPID } ?: throw Exception("no processes with given virtual PID: $vPID")
 
     internal fun status() = processes.joinToString (
         "\n",
