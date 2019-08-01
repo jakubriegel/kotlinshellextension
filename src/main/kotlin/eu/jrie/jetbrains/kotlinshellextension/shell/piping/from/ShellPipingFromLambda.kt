@@ -18,7 +18,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    fun from(lambda: PipelineContextLambda) = Pipeline(lambda, this)
+    suspend fun from(lambda: PipelineContextLambda) = Pipeline.fromLambda(lambda, this)
 
     /**
      * Starts new [Pipeline] from this lambda to [process].
@@ -26,7 +26,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(process: ProcessExecutable) = from(this) pipe process
+    suspend infix fun PipelineContextLambda.pipe(process: ProcessExecutable) = from(this) pipe process
 
     /**
      * Starts new [Pipeline] from this lambda to [lambda].
@@ -34,7 +34,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun PipelineContextLambda.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
+    suspend infix fun PipelineContextLambda.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
 
     /**
      * Starts new [Pipeline] from this lambda to [channel].
@@ -67,6 +67,14 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      * @return this [Pipeline]
      */
     suspend infix fun PipelineContextLambda.pipe(file: File) = from(this) pipe file
+
+    /**
+     * Starts new [Pipeline] from this [PipelineContextLambda] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun PipelineContextLambda.pipeAppend(file: File) = from(this) pipeAppend  file
 
     /**
      * Starts new [Pipeline] from this lambda to [stringBuilder].

@@ -11,6 +11,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveCh
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipeConfig
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.ShellPiping
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -55,13 +56,17 @@ open class Shell private constructor (
     private val daemonsExecs = mutableListOf<ProcessExecutable>()
 
     override val pipelines: List<Pipeline>
-        get() = emptyList() // detachedPipelines.map { it.first }
+        get() = detachedPipelines.toList() // map { it.first }
 
-    private val detachedPipelines = mutableListOf<Job>()
+    private val detachedPipelines = mutableListOf<Pipeline>()//Pair<Pipeline, Job>>()
 
     init {
         val systemOutChannel: ProcessChannel = Channel(16)
-        commander.scope.launch { systemOutChannel.consumeEach { System.out.writePacket(it) } }
+        commander.scope.launch (Dispatchers.IO) {
+            systemOutChannel.consumeEach {
+                System.out.writePacket(it)
+            }
+        }
         stdout = systemOutChannel
         stderr = systemOutChannel
     }
@@ -94,14 +99,16 @@ open class Shell private constructor (
         detachedJobs.add(executable.process to job)
     }
 
-    override suspend fun detach(pipeConfig: PipeConfig) {
-        val job = commander.scope.launch { this@Shell.pipeConfig().apply { if (!ended) toDefaultEndChannel(stdout) } }
-        detachedPipelines.add(job)
-    }
+    override suspend fun detach(pipeConfig: PipeConfig) = this.pipeConfig()
+        .apply { if (!closed) { toDefaultEndChannel(stdout) } }
+        .also {
+//            val job = commander.scope.launch { it.await() }
+            detachedPipelines.add(it) // to job)
+        }
 
     override suspend fun joinDetached() {
         detachedJobs.forEach { it.second.join() }
-        detachedPipelines.forEach { it.join() }
+        detachedPipelines.forEach { it.await() }
     }
 
     override suspend fun fg(process: Process) {

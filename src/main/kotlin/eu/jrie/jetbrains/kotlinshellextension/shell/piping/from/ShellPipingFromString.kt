@@ -17,7 +17,7 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(process: ProcessExecutable) = from(this.byteInputStream()) pipe process
+    suspend infix fun String.pipe(process: ProcessExecutable) = from(this.byteInputStream()) pipe process
 
     /**
      * Starts new [Pipeline] from this [String] to [lambda].
@@ -25,7 +25,7 @@ interface ShellPipingFromString : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun String.pipe(lambda: PipelineContextLambda) = from(this.byteInputStream()) pipe lambda
+    suspend infix fun String.pipe(lambda: PipelineContextLambda) = from(this.byteInputStream()) pipe lambda
 
     /**
      * Starts new [Pipeline] from this [String] to [channel].
@@ -58,6 +58,14 @@ interface ShellPipingFromString : ShellPipingFromStream {
      * @return this [Pipeline]
      */
     suspend infix fun String.pipe(file: File) = from(this.byteInputStream()) pipe file
+
+    /**
+     * Starts new [Pipeline] from this [String] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun String.pipeAppend(file: File) = from(this.byteInputStream()) pipeAppend  file
 
     /**
      * Starts new [Pipeline] from this [String] to [stringBuilder].

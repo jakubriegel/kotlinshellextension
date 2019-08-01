@@ -28,8 +28,8 @@ class ProcessExecutable (
     context: ProcessExecutionContext,
     private val builder: ProcessBuilder
 ) : Executable(context) {
-
     lateinit var process: Process
+    internal var afterAwait: () -> Unit = {}
 
     override fun init() = with(context as ProcessExecutionContext) {
         builder
@@ -43,7 +43,10 @@ class ProcessExecutable (
         commander.startProcess(process)
     }
 
-    override suspend fun await()  = with(context as ProcessExecutionContext) {
+    override suspend fun await() = with(context as ProcessExecutionContext) {
         commander.awaitProcess(process)
+        afterAwait()
     }
+
+
 }

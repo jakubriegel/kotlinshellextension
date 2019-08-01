@@ -19,7 +19,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(process: ProcessExecutable) = from(this.inputStream()) pipe process
+    suspend infix fun ByteReadPacket.pipe(process: ProcessExecutable) = from(this.inputStream()) pipe process
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [lambda].
@@ -27,7 +27,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    infix fun ByteReadPacket.pipe(lambda: PipelineContextLambda) = from(this.inputStream()) pipe lambda
+    suspend infix fun ByteReadPacket.pipe(lambda: PipelineContextLambda) = from(this.inputStream()) pipe lambda
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [channel].
@@ -60,6 +60,14 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      * @return this [Pipeline]
      */
     suspend infix fun ByteReadPacket.pipe(file: File) = from(this.inputStream()) pipe file
+
+    /**
+     * Starts new [Pipeline] from this [ByteReadPacket] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun ByteReadPacket.pipeAppend(file: File) = from(this.inputStream()) pipeAppend  file
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [stringBuilder].

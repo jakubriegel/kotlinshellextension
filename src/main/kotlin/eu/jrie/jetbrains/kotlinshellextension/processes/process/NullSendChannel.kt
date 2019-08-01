@@ -13,6 +13,7 @@ class NullSendChannel : ProcessSendChannel {
     @ExperimentalCoroutinesApi
     override val isClosedForSend = false
 
+    @Suppress("OverridingDeprecatedMember")
     @ExperimentalCoroutinesApi
     override val isFull = false
 

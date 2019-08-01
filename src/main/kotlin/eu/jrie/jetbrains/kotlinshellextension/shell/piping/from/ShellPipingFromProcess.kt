@@ -19,7 +19,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    fun from(process: ProcessExecutable) = Pipeline(process, this)
+    suspend fun from(process: ProcessExecutable) = Pipeline.fromProcess(process, this)
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to one specified by [process].
@@ -28,7 +28,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(process: ProcessExecutable) = from(this) pipe process
+    suspend infix fun ProcessExecutable.pipe(process: ProcessExecutable) = from(this) pipe process
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [lambda].
@@ -37,7 +37,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun ProcessExecutable.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
+    suspend infix fun ProcessExecutable.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [channel].
@@ -74,6 +74,14 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      */
     @ExperimentalCoroutinesApi
     suspend infix fun ProcessExecutable.pipe(file: File) = from(this) pipe file
+
+    /**
+     * Starts new [Pipeline] from this [ProcessExecutable] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun ProcessExecutable.pipeAppend(file: File) = from(this) pipeAppend  file
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [stringBuilder].

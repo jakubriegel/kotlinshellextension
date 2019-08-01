@@ -2,12 +2,20 @@
 
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.ProcessCommander
+import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutable
+import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutionContext
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.ExecutionMode
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.from.ShellPipingFrom
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 
 typealias PipeConfig =  suspend ShellPiping.() -> Pipeline
+typealias PipelineFork = suspend (ProcessReceiveChannel) -> Unit
 
 @ExperimentalCoroutinesApi
 interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
@@ -18,24 +26,20 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
     val pipelines: List<Pipeline>
 
     /**
-     * Creates and executes new [Pipeline] specified by DSL [pipeConfig]
+     * Creates and executes new [Pipeline] specified by DSL [pipeConfig] and executes it in given [mode]
      * Part of piping DSL
      */
-    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) {
-        when (mode) {
-            ExecutionMode.ATTACHED -> pipeConfig().apply { if (!ended) toDefaultEndChannel(stdout) }
-            ExecutionMode.DETACHED -> detach(pipeConfig)
-            ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
-        }
+    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) = when (mode) {
+        ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) { toDefaultEndChannel(stdout) } } .await()
+        ExecutionMode.DETACHED -> detach(pipeConfig)
+        ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
     }
 
     /**
      * Creates new [Pipeline] specified by DSL [pipeConfig] and executes it as detached job.
      * Part of piping DSL
      */
-    suspend fun detach(pipeConfig: PipeConfig)
-
-
+    suspend fun detach(pipeConfig: PipeConfig): Pipeline
 
     /**
      * Awaits this [Pipeline]
@@ -47,6 +51,54 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
     @Suppress("UNUSED_PARAMETER")
     @ExperimentalCoroutinesApi
     suspend infix fun Pipeline.await(all: All) = await()
+
+    private suspend fun forkStdErr(process: ProcessExecutable, fork: PipelineFork) {
+        forkStdErr(
+            process,
+            Channel<ProcessChannelUnit>(16).also {
+                fork(it)
+                process.afterAwait = { it.close() }
+            }
+        )
+    }
+
+    private fun forkStdErr(process: ProcessExecutable, channel: ProcessSendChannel) {
+        process.updateStdErr(channel)
+    }
+
+    /**
+     * Forks current [Pipeline] by creating new [Pipeline] with stderr from last process as an input
+     * Part of piping DSL
+     *
+     * @return this [ProcessBuilder]
+     */
+    suspend infix fun ProcessExecutable.forkErr(fork: PipelineFork) = this.also {
+        forkStdErr(this, fork)
+    }
+
+    /**
+     * Forks current [Pipeline] by creating new [Pipeline] with stderr from last process as an input
+     * Part of piping DSL
+     *
+     * @return this [ProcessBuilder]
+     */
+    suspend infix fun ProcessExecutable.forkErr(channel: ProcessSendChannel) = this.also {
+        forkStdErr(this, channel)
+    }
+
+    private class ForkErrorExecutionContext (
+        override val stdin: ProcessReceiveChannel,
+        override val stdout: ProcessSendChannel,
+        override val stderr: ProcessSendChannel,
+        override val commander: ProcessCommander
+    ) : ProcessExecutionContext {
+        constructor(from: ProcessExecutionContext, stderr: ProcessSendChannel)
+                : this(from.stdin, from.stdout, stderr, from.commander)
+    }
+
+    private fun ProcessExecutable.updateStdErr(err: ProcessSendChannel) {
+        this.context = ForkErrorExecutionContext(this.context as ProcessExecutionContext, err)
+    }
 }
 
 /**

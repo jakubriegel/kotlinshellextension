@@ -28,7 +28,7 @@ interface ShellPipingThrough : ShellPipingTo {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(process: ProcessExecutable) = throughProcess(process)
+    suspend infix fun Pipeline.pipe(process: ProcessExecutable) = throughProcess(process)
 
     /**
      * Adds [lambda] to this pipeline.
@@ -37,13 +37,21 @@ interface ShellPipingThrough : ShellPipingTo {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(lambda: PipelineContextLambda) = throughLambda(lambda = lambda)
+    suspend infix fun Pipeline.pipe(lambda: PipelineContextLambda) = throughLambda(lambda = lambda)
 
+    /**
+     * Constructs [PipelineContextLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun contextLambda(lambda: PipelineContextLambda) = lambda
 
+    /**
+     * Constructs [PipelinePacketLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun packetLambda(
         lambda: PipelinePacketLambda
-    ): PipelineContextLambda = { ctx ->
+    ) = contextLambda { ctx ->
         ctx.stdin.consumeEach { packet ->
             val out = lambda(packet)
             ctx.stdout.send(out.first)
@@ -51,10 +59,36 @@ interface ShellPipingThrough : ShellPipingTo {
         }
     }
 
+    /**
+     * Constructs [ByteReadPacket] from given [bytes]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     */
     fun packet(bytes: ByteArray) = buildPacket { writeFully(bytes) }
-    fun packet(string: String) = packet(string.toByteArray())
-    fun emptyPacket() = packet("")
 
+    /**
+     * Constructs [ByteReadPacket] from given [string]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     * @see stringLambda
+     */
+    fun packet(string: String) = packet(string.toByteArray())
+
+    /**
+     * Constructs empty [ByteReadPacket]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     * @see stringLambda
+     */
+    fun emptyPacket() = packet(emptyByteArray())
+
+    /**
+     * Constructs [PipelineByteArrayLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun byteArrayLambda(
         lambda: PipelineByteArrayLambda
     ) = packetLambda { p ->
@@ -63,13 +97,21 @@ interface ShellPipingThrough : ShellPipingTo {
 
     fun emptyByteArray() = ByteArray(0)
 
+    /**
+     * Constructs [PipelineStringLambda] to be used in piping
+     * Part of piping DSL
+     */
     fun stringLambda(
         lambda: PipelineStringLambda
     ) = packetLambda { b ->
         lambda(b.readText()).let { packet(it.first) to packet(it.second) }
     }
 
-    fun streamLambda(lambda: PipelineStreamLambda): PipelineContextLambda = { ctx ->
+    /**
+     * Constructs [PipelineStreamLambda] to be used in piping
+     * Part of piping DSL
+     */
+    fun streamLambda(lambda: PipelineStreamLambda) = contextLambda { ctx ->
         val inStream = ProcessChannelInputStream(ctx.stdin, this.commander.scope)
         val stdStream = ProcessChannelOutputStream(ctx.stdout, this.commander.scope)
         val errStream = ProcessChannelOutputStream(ctx.stderr, this.commander.scope)

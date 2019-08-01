@@ -1,9 +1,10 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
 import eu.jrie.jetbrains.kotlinshellextension.BaseIntegrationTest
+import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineContextLambda
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.io.core.BytePacketBuilder
-import kotlinx.io.core.ByteReadPacket
 import org.junit.jupiter.api.BeforeEach
 import java.io.File
 
@@ -11,8 +12,9 @@ import java.io.File
 abstract class ProcessBaseIntegrationTest : BaseIntegrationTest() {
     private lateinit var resultBuilder: BytePacketBuilder
 
-    protected val storeResult = { it: ByteReadPacket ->
-        resultBuilder.writePacket(it) }
+    protected val storeResult: PipelineContextLambda = { ctx ->
+        ctx.stdin.consumeEach { resultBuilder.writePacket(it) }
+    }
 
     @BeforeEach
     fun initResultBuilder() {

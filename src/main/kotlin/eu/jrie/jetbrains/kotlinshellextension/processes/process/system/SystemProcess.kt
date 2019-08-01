@@ -104,9 +104,7 @@ class SystemProcess @TestOnly internal constructor (
                     .append(line)
                     .append('\n')
                     .build()
-                    .also {
-                        runBlocking(scope.coroutineContext) { out.send(it) }
-                    }
+                    .also { runBlocking(scope.coroutineContext) { out.send(it) } }
             }
         }
     }
