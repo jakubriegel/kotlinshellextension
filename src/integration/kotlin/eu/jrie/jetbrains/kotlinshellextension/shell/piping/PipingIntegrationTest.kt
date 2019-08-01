@@ -140,9 +140,10 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
         // when
         shell {
             val script = systemProcess { cmd = "./${file.name}" }
+            val cat = systemProcess { cmd = "cat" }
             val grep = systemProcess { cmd { "grep" withArg pattern } }
 
-            (script forkErr nullout) pipe grep pipe storeResult
+            (script forkErr nullout) pipe cat pipe grep pipe storeResult
         }
 
         // then
