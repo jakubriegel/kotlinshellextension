@@ -76,6 +76,14 @@ interface ShellPipingFromProcess : ShellPipingThrough {
     suspend infix fun ProcessExecutable.pipe(file: File) = from(this) pipe file
 
     /**
+     * Starts new [Pipeline] from this [ProcessExecutable] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun ProcessExecutable.pipeAppend(file: File) = from(this) pipeAppend  file
+
+    /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to [stringBuilder].
      * Part of piping DSL
      *

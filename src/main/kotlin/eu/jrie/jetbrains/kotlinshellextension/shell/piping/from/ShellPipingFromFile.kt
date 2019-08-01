@@ -60,6 +60,14 @@ interface ShellPipingFromFile : ShellPipingFromStream {
     suspend infix fun File.pipe(file: File) = from(this.inputStream()) pipe file
 
     /**
+     * Starts new [Pipeline] from this [File] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun File.pipeAppend(file: File) = from(this.inputStream()) pipeAppend  file
+
+    /**
      * Starts new [Pipeline] from this [File] to [stringBuilder].
      * Shall be wrapped with piping DSL
      *

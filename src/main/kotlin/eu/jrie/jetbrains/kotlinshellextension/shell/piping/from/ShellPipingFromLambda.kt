@@ -69,6 +69,14 @@ interface ShellPipingFromLambda : ShellPipingThrough {
     suspend infix fun PipelineContextLambda.pipe(file: File) = from(this) pipe file
 
     /**
+     * Starts new [Pipeline] from this [PipelineContextLambda] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun PipelineContextLambda.pipeAppend(file: File) = from(this) pipeAppend  file
+
+    /**
      * Starts new [Pipeline] from this lambda to [stringBuilder].
      * Part of piping DSL
      *

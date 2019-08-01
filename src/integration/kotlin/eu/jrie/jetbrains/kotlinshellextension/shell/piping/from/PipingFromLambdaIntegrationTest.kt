@@ -100,6 +100,22 @@ class PipingFromLambdaIntegrationTest : PipingFromBaseIntegrationTest() {
     }
 
     @Test
+    fun `should start pipeline from lambda to file append`() {
+        // given
+        val fileContent = "def"
+        val file = file(content = fileContent)
+
+        // when
+        shell {
+            pipeline { lambda pipeAppend file }
+        }
+
+        // then
+        assertEquals(fileContent.plus(content), file.readText())
+    }
+
+
+    @Test
     fun `should start pipeline from lambda to string builder`() {
         // given
         val builder = StringBuilder()

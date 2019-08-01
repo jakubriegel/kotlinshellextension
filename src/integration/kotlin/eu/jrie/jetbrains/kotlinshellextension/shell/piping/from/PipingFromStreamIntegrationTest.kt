@@ -103,6 +103,22 @@ class PipingFromStreamIntegrationTest : PipingFromBaseIntegrationTest() {
     }
 
     @Test
+    fun `should start pipeline from stream to file append`() {
+        // given
+        val fileContent = "def"
+        val file = file(content = fileContent)
+
+        // when
+        shell {
+            pipeline { stream pipeAppend file }
+        }
+
+        // then
+        assertEquals(fileContent.plus(content), file.readText())
+    }
+
+
+    @Test
     fun `should start pipeline from stream to string builder`() {
         // given
         val builder = StringBuilder()

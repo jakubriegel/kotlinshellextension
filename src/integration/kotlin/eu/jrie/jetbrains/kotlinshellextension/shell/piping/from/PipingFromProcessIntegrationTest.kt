@@ -30,7 +30,7 @@ class PipingFromProcessIntegrationTest : PipingFromBaseIntegrationTest() {
         }
         
         // then
-        assertEquals("$content\n", readResult())
+        assertContent()
     }
 
     @Test
@@ -108,6 +108,22 @@ class PipingFromProcessIntegrationTest : PipingFromBaseIntegrationTest() {
         // then
         assertContent(file.readText())
     }
+
+    @Test
+    fun `should start pipeline from process to file append`() {
+        // given
+        val fileContent = "def"
+        val file = file(content = fileContent)
+
+        // when
+        shell {
+            pipeline { echo pipeAppend file }
+        }
+
+        // then
+        assertEquals(fileContent.plus(content).plus("\n"), file.readText())
+    }
+
 
     @Test
     fun `should start pipeline from process to string builder`() {

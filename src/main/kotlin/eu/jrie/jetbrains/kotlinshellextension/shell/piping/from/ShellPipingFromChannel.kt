@@ -70,6 +70,14 @@ interface ShellPipingFromChannel : ShellPipingThrough {
     suspend infix fun ProcessReceiveChannel.pipe(file: File) = from(this) pipe file
 
     /**
+     * Starts new [Pipeline] from this [ProcessReceiveChannel] and appends [file].
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend infix fun ProcessReceiveChannel.pipeAppend(file: File) = from(this) pipeAppend  file
+
+    /**
      * Starts new [Pipeline] from this [ProcessReceiveChannel] to [stringBuilder].
      * Shall be wrapped with piping DSL
      *
