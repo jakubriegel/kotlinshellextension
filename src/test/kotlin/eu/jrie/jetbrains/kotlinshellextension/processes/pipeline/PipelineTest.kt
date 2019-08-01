@@ -36,7 +36,7 @@ class PipelineTest {
     fun `should create new pipeline from process`() {
         // given
         val processMock = mockk<Process>()
-        val executableMock = processExecutableMock(processMock)
+        val executableMock = processExecutableSpy(processMock)
 
         // when
         val pipeline = runTest { Pipeline(executableMock, contextMock) }
@@ -126,11 +126,11 @@ class PipelineTest {
     fun `should add process to pipeline`() {
         // given
         val processMock = mockk<Process>()
-        val executableMock = processExecutableMock(processMock)
+        val executableMock = processExecutableSpy(processMock)
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).throughProcess(executableMock)
+            Pipeline(processExecutableSpy(), contextMock).throughProcess(executableMock)
         }
 
 
@@ -160,7 +160,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).throughLambda(lambda = lambda).apply { await() }
+            Pipeline(processExecutableSpy(), contextMock).throughLambda(lambda = lambda).apply { await() }
         }
 
         // then
@@ -178,14 +178,15 @@ class PipelineTest {
     @Test
     fun `should end pipeline with channel`() {
         // given
-        val channel: ProcessChannel = spyk()
+        val channel: ProcessChannel = spyk(Channel())
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).toEndChannel(channel)
+            Pipeline(processExecutableSpy(), contextMock).toEndChannel(channel)
         }
 
         // then
+        verify { channel.close() }
         confirmVerified(channel)
 
         verify {
@@ -202,11 +203,11 @@ class PipelineTest {
     @Test
     fun `should end pipeline with channel and do not close it`() {
         // given
-        val channel: ProcessChannel = spyk()
+        val channel: ProcessChannel = spyk(Channel())
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).toEndChannel(channel)
+            Pipeline(processExecutableSpy(), contextMock).toDefaultEndChannel(channel)
         }
 
         // then
@@ -230,7 +231,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).toEndPacket(builder)
+            Pipeline(processExecutableSpy(), contextMock).toEndPacket(builder)
         }
 
         // then
@@ -252,7 +253,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).toEndStream(stream)
+            Pipeline(processExecutableSpy(), contextMock).toEndStream(stream)
         }
 
         // then
@@ -274,7 +275,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableMock(), contextMock).toEndStringBuilder(builder)
+            Pipeline(processExecutableSpy(), contextMock).toEndStringBuilder(builder)
         }
 
         // then
@@ -304,7 +305,7 @@ class PipelineTest {
         }
     }
 
-    private fun processExecutableMock(processMock: Process = mockk()) = spyk (ProcessExecutable(contextMock(), mockk())) {
+    private fun processExecutableSpy(processMock: Process = mockk()) = spyk (ProcessExecutable(contextMock(), mockk())) {
         every { process } returns processMock
         every { init() } just runs
         coEvery { exec() } just runs

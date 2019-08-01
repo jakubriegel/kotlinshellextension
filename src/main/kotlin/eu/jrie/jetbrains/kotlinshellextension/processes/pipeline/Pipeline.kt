@@ -96,16 +96,7 @@ class Pipeline @TestOnly internal constructor (
      * @see ShellPiping
      */
     internal constructor(stream: InputStream, context: ProcessExecutionContext) : this(context) {
-        addLambda(readStream(stream), end = false, closeOut = true)
-    }
-
-    private fun readStream(stream: InputStream): PipelineContextLambda = { ctx ->
-        stream.use {
-            do {
-                val packet = it.readPacketAtMost(PIPELINE_CHANNEL_PACKET_SIZE)
-                ctx.stdout.send(packet)
-            } while (packet.remaining == PIPELINE_CHANNEL_PACKET_SIZE)
-        }
+        addLambda(stream.readFully(), end = false, closeOut = true)
     }
 
     /**
@@ -158,11 +149,16 @@ class Pipeline @TestOnly internal constructor (
 
     private suspend fun toEndLambda(
         closeOut: Boolean = false, lambda: suspend (ByteReadPacket) -> Unit
+    ) = toEndLambda(closeOut, lambda, {})
+
+    private suspend fun toEndLambda(
+        closeOut: Boolean = false, lambda: suspend (ByteReadPacket) -> Unit, finalize: () -> Unit
     ) = apply {
         throughLambda(end = true, closeOut = closeOut) { ctx ->
             ctx.stdin.consumeEach {
                 lambda(it)
             }
+            finalize()
         }
         closed = true
         await()
@@ -174,9 +170,11 @@ class Pipeline @TestOnly internal constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    suspend fun toEndChannel(channel: ProcessSendChannel) = toEndLambda (true) {
-        channel.send(it)
-    }
+    suspend fun toEndChannel(channel: ProcessSendChannel) = toEndLambda (
+        true,
+        { channel.send(it) },
+        { channel.close() }
+    )
 
     internal suspend fun toDefaultEndChannel(channel: ProcessSendChannel) = toEndLambda {
         channel.send(it)
@@ -278,4 +276,13 @@ class Pipeline @TestOnly internal constructor (
         newOut: ProcessSendChannel = this.stdout,
         newErr: ProcessSendChannel = this.stderr
     ) = PipelineExecutionContext(newIn, newOut, newErr, commander)
+
+    private fun InputStream.readFully(): PipelineContextLambda = { ctx ->
+        use {
+            do {
+                val packet = it.readPacketAtMost(PIPELINE_CHANNEL_PACKET_SIZE)
+                ctx.stdout.send(packet)
+            } while (packet.remaining == PIPELINE_CHANNEL_PACKET_SIZE)
+        }
+    }
 }

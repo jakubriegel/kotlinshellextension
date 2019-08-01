@@ -64,6 +64,15 @@ interface ShellPipingThrough : ShellPipingTo {
     fun packet(bytes: ByteArray) = buildPacket { writeFully(bytes) }
 
     /**
+     * Constructs [ByteReadPacket] from given [string]
+     * Part of piping DSL
+     *
+     * @see packetLambda
+     * @see stringLambda
+     */
+    fun packet(string: String) = packet(string.toByteArray())
+
+    /**
      * Constructs empty [ByteReadPacket]
      * Part of piping DSL
      *
@@ -93,15 +102,6 @@ interface ShellPipingThrough : ShellPipingTo {
     ) = packetLambda { b ->
         lambda(b.readText()).let { packet(it.first) to packet(it.second) }
     }
-
-    /**
-     * Constructs [ByteReadPacket] from given [string]
-     * Part of piping DSL
-     *
-     * @see packetLambda
-     * @see stringLambda
-     */
-    fun packet(string: String) = packet(string.toByteArray())
 
     /**
      * Constructs [PipelineStreamLambda] to be used in piping

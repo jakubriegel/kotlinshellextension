@@ -21,19 +21,17 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
      * Creates and executes new [Pipeline] specified by DSL [pipeConfig]
      * Part of piping DSL
      */
-    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) {
-        when (mode) {
-            ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) toDefaultEndChannel(stdout) }
-            ExecutionMode.DETACHED -> detach(pipeConfig)
-            ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
-        }
+    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig): Pipeline = when (mode) {
+        ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) { toDefaultEndChannel(stdout) } }
+        ExecutionMode.DETACHED -> detach(pipeConfig)
+        ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
     }
 
     /**
      * Creates new [Pipeline] specified by DSL [pipeConfig] and executes it as detached job.
      * Part of piping DSL
      */
-    suspend fun detach(pipeConfig: PipeConfig)
+    suspend fun detach(pipeConfig: PipeConfig): Pipeline
 
 
 
