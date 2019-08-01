@@ -10,6 +10,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveCh
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import java.io.File
 
 @ExperimentalCoroutinesApi
 interface ShellProcess : ShellBase {
@@ -58,6 +59,19 @@ interface ShellProcess : ShellBase {
      * Executes system process from this command line
      */
     suspend operator fun String.invoke(mode: ExecutionMode = ExecutionMode.ATTACHED) = process().invoke(mode)
+
+    /**
+     * Creates executable system process from contents of this [File]
+     */
+    fun File.process(vararg args: String) = when (args.size) {
+        0 -> systemProcess { cmd = canonicalPath }
+        else -> systemProcess { cmd { canonicalPath withArgs args.toList() } }
+    }
+
+    /**
+     * Executes system process from from contents of this [File]
+     */
+    suspend operator fun File.invoke(mode: ExecutionMode = ExecutionMode.ATTACHED, vararg args: String) = process(*args).invoke(mode)
 
     /**
      * Creates executable KotlinScript process

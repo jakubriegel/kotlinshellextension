@@ -18,11 +18,11 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
     val pipelines: List<Pipeline>
 
     /**
-     * Creates and executes new [Pipeline] specified by DSL [pipeConfig]
+     * Creates and executes new [Pipeline] specified by DSL [pipeConfig] and executes it in given [mode]
      * Part of piping DSL
      */
-    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig): Pipeline = when (mode) {
-        ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) { toDefaultEndChannel(stdout) } }
+    suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) = when (mode) {
+        ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) { toDefaultEndChannel(stdout) } } .await()
         ExecutionMode.DETACHED -> detach(pipeConfig)
         ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
     }
@@ -32,8 +32,6 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
      * Part of piping DSL
      */
     suspend fun detach(pipeConfig: PipeConfig): Pipeline
-
-
 
     /**
      * Awaits this [Pipeline]

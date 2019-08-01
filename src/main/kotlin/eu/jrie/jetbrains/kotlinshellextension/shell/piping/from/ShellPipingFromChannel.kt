@@ -19,7 +19,7 @@ interface ShellPipingFromChannel : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    fun from(channel: ProcessReceiveChannel) = Pipeline(channel, this)
+    fun from(channel: ProcessReceiveChannel) = Pipeline.fromChannel(channel, this)
 
     /**
      * Starts new [Pipeline] from this [ProcessReceiveChannel] to [process].
@@ -27,7 +27,7 @@ interface ShellPipingFromChannel : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun ProcessReceiveChannel.pipe(process: ProcessExecutable) = from(this) pipe process
+    suspend infix fun ProcessReceiveChannel.pipe(process: ProcessExecutable) = from(this) pipe process
 
     /**
      * Starts new [Pipeline] from this [ProcessReceiveChannel] to [lambda].
@@ -35,7 +35,7 @@ interface ShellPipingFromChannel : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun ProcessReceiveChannel.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
+    suspend infix fun ProcessReceiveChannel.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
 
     /**
      * Starts new [Pipeline] from this [ProcessReceiveChannel] to [channel].

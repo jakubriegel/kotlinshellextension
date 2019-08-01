@@ -19,7 +19,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    fun from(stream: InputStream) = Pipeline(stream, this)
+    suspend fun from(stream: InputStream) = Pipeline.fromStream(stream, this)
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [process].
@@ -27,7 +27,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(process: ProcessExecutable) = from(this) pipe process
+    suspend infix fun InputStream.pipe(process: ProcessExecutable) = from(this) pipe process
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [lambda].
@@ -35,7 +35,7 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    infix fun InputStream.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
+    suspend infix fun InputStream.pipe(lambda: PipelineContextLambda) = from(this) pipe lambda
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [channel].

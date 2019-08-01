@@ -1,6 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping.from
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipingBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.io.core.BytePacketBuilder
@@ -11,7 +12,7 @@ import java.io.File
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
-class PipingFromFileIntegrationTest : PipingFromBaseIntegrationTest() {
+class PipingFromFileIntegrationTest : PipingBaseIntegrationTest() {
 
     private lateinit var file: File
 

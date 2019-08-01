@@ -1,6 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping.from
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipingBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
-class PipingFromChannelIntegrationTest : PipingFromBaseIntegrationTest() {
+class PipingFromChannelIntegrationTest : PipingBaseIntegrationTest() {
 
     private val channel: ProcessChannel = Channel(16)
 

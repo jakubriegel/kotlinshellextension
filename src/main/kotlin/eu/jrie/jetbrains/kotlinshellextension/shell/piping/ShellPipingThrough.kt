@@ -28,7 +28,7 @@ interface ShellPipingThrough : ShellPipingTo {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(process: ProcessExecutable) = throughProcess(process)
+    suspend infix fun Pipeline.pipe(process: ProcessExecutable) = throughProcess(process)
 
     /**
      * Adds [lambda] to this pipeline.
@@ -37,7 +37,7 @@ interface ShellPipingThrough : ShellPipingTo {
      * @return this [Pipeline]
      */
     @ExperimentalCoroutinesApi
-    infix fun Pipeline.pipe(lambda: PipelineContextLambda) = throughLambda(lambda = lambda)
+    suspend infix fun Pipeline.pipe(lambda: PipelineContextLambda) = throughLambda(lambda = lambda)
 
     /**
      * Constructs [PipelineContextLambda] to be used in piping

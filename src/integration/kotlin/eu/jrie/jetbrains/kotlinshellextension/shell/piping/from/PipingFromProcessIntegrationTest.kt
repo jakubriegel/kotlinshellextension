@@ -3,6 +3,7 @@ package eu.jrie.jetbrains.kotlinshellextension.shell.piping.from
 import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecutable
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.Shell
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipingBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
-class PipingFromProcessIntegrationTest : PipingFromBaseIntegrationTest() {
+class PipingFromProcessIntegrationTest : PipingBaseIntegrationTest() {
 
     private val Shell.echo: ProcessExecutable
         get() = "echo $content".process()

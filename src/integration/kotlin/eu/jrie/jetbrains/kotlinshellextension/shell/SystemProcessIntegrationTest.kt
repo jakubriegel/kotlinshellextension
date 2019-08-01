@@ -90,7 +90,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
         shell {
             val script = systemProcess { cmd = "./${file.name}" }
             detach(script)
-            delay(50)
+            delay(5)
             stateAfterCall = processes.first().pcb.state
         }
 
@@ -107,7 +107,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
         // when
         shell {
             "./${file.name}"(ExecutionMode.DETACHED)
-            delay(50)
+            delay(5)
             stateAfterCall = processes.first().pcb.state
         }
 

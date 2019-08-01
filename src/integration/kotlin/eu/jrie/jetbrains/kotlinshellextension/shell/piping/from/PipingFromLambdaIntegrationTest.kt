@@ -2,6 +2,7 @@ package eu.jrie.jetbrains.kotlinshellextension.shell.piping.from
 
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineContextLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
+import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipingBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.io.core.BytePacketBuilder
@@ -12,7 +13,7 @@ import org.junit.jupiter.api.Test
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
-class PipingFromLambdaIntegrationTest : PipingFromBaseIntegrationTest() {
+class PipingFromLambdaIntegrationTest : PipingBaseIntegrationTest() {
 
     private val lambda: PipelineContextLambda = { ctx ->
         ctx.stdout.send(buildPacket { writeText(content) })

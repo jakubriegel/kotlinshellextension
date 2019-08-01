@@ -64,61 +64,28 @@ class Pipeline @TestOnly internal constructor (
         get() = processLine.toList()
 
     /**
-     * Starts new [Pipeline] with process specified by given [ProcessExecutable]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(process: ProcessExecutable, context: ProcessExecutionContext) : this(context) {
-        addProcess(process)
-    }
-
-    /**
-     * Starts new [Pipeline] with [lambda]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(lambda: PipelineContextLambda, context: ProcessExecutionContext) : this(context) {
-        addLambda(lambda, end = false, closeOut = true)
-    }
-
-    /**
-     * Starts new [Pipeline] with [channel]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(channel: ProcessReceiveChannel, context: ProcessExecutionContext) : this(context) {
-        lastOut = channel
-    }
-
-    /**
-     * Starts new [Pipeline] with given [stream]
-     *
-     * @see ShellPiping
-     */
-    internal constructor(stream: InputStream, context: ProcessExecutionContext) : this(context) {
-        addLambda(stream.readFully(), end = false, closeOut = true)
-    }
-
-    /**
      * Adds [process] to this [Pipeline]
      *
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun throughProcess(process: ProcessExecutable) = apply {
+    suspend fun throughProcess(process: ProcessExecutable) = apply {
         addProcess(process.updateContext(newIn = lastOut))
     }
 
-    private fun addProcess(exec: ProcessExecutable) = ifNotEnded {
-        exec.updateContext(newOut = channel()).init()
+    private suspend fun addProcess(executable: ProcessExecutable) = ifNotEnded {
+        executable.updateContext(newOut = channel())
+            .apply {
+                init()
+                exec()
+            }
 
         launch {
-            exec.exec()
-            exec.await()
-            exec.context.stdout.close()
+            executable.await()
+            executable.context.stdout.close()
         }
 
-        processLine.add(exec.process)
+        processLine.add(executable.process)
     }
 
     /**
@@ -127,11 +94,11 @@ class Pipeline @TestOnly internal constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    fun throughLambda(end: Boolean = false, closeOut: Boolean = true, lambda: PipelineContextLambda) = apply {
+    suspend fun throughLambda(end: Boolean = false, closeOut: Boolean = true, lambda: PipelineContextLambda) = apply {
         addLambda(lambda, context.updated(newIn = lastOut), end, closeOut)
     }
 
-    private fun addLambda(
+    private suspend fun addLambda(
         lambda: PipelineContextLambda,
         lambdaContext: PipelineExecutionContext = PipelineExecutionContext(context),
         end: Boolean,
@@ -155,13 +122,10 @@ class Pipeline @TestOnly internal constructor (
         closeOut: Boolean = false, lambda: suspend (ByteReadPacket) -> Unit, finalize: () -> Unit
     ) = apply {
         throughLambda(end = true, closeOut = closeOut) { ctx ->
-            ctx.stdin.consumeEach {
-                lambda(it)
-            }
+            ctx.stdin.consumeEach { lambda(it) }
             finalize()
         }
         closed = true
-        await()
     }
 
     /**
@@ -176,9 +140,7 @@ class Pipeline @TestOnly internal constructor (
         { channel.close() }
     )
 
-    internal suspend fun toDefaultEndChannel(channel: ProcessSendChannel) = toEndLambda {
-        channel.send(it)
-    }
+    internal suspend fun toDefaultEndChannel(channel: ProcessSendChannel) = toEndLambda { channel.send(it) }
 
     /**
      * Ends this [Pipeline] with [packetBuilder]
@@ -239,7 +201,7 @@ class Pipeline @TestOnly internal constructor (
         asyncJobs.add(context.commander.scope.launch(block = block))
     }
 
-    private fun ifNotEnded(block: () -> Unit) {
+    private suspend fun ifNotEnded(block: suspend () -> Unit) {
         if (closed) throw Exception("Pipeline closed")
         else block()
     }
@@ -247,6 +209,38 @@ class Pipeline @TestOnly internal constructor (
     companion object {
         private const val PIPELINE_CHANNEL_PACKET_SIZE: Long = 256
         private const val PIPELINE_CHANNEL_BUFFER_SIZE = 16
+
+        /**
+         * Starts new [Pipeline] with process specified by given [ProcessExecutable]
+         *
+         * @see ShellPiping
+         */
+        internal suspend fun fromProcess(process: ProcessExecutable, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { addProcess(process) }
+
+        /**
+         * Starts new [Pipeline] with [lambda]
+         *
+         * @see ShellPiping
+         */
+        internal suspend fun fromLambda(lambda: PipelineContextLambda, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { addLambda(lambda, end = false, closeOut = true) }
+
+        /**
+         * Starts new [Pipeline] with [channel]
+         *
+         * @see ShellPiping
+         */
+        internal fun fromChannel(channel: ProcessReceiveChannel, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { lastOut = channel }
+
+        /**
+         * Starts new [Pipeline] with given [stream]
+         *
+         * @see ShellPiping
+         */
+        internal suspend fun fromStream(stream: InputStream, context: ProcessExecutionContext) = Pipeline(context)
+            .apply { addLambda(stream.readFully(), end = false, closeOut = true) }
 
         private val logger = LoggerFactory.getLogger(Pipeline::class.java)
     }

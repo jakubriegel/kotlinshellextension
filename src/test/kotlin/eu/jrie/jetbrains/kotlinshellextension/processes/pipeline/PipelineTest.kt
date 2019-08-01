@@ -39,7 +39,7 @@ class PipelineTest {
         val executableMock = processExecutableSpy(processMock)
 
         // when
-        val pipeline = runTest { Pipeline(executableMock, contextMock) }
+        val pipeline = runTest { Pipeline.fromProcess(executableMock, contextMock) }
 
         // then
         verify {
@@ -65,7 +65,7 @@ class PipelineTest {
         val lambda: PipelineContextLambda = { started = true }
 
         // when
-        val pipeline = runTest { Pipeline(lambda, contextMock) }
+        val pipeline = runTest { Pipeline.fromLambda(lambda, contextMock) }
 
         // then
         verify {
@@ -86,7 +86,7 @@ class PipelineTest {
         val channel: ProcessReceiveChannel = spyk()
 
         // when
-        val pipeline = runTest { Pipeline(channel, contextMock) }
+        val pipeline = runTest { Pipeline.fromChannel(channel, contextMock) }
 
         // then
         confirmVerified(channel)
@@ -106,7 +106,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(stream, contextMock).apply { await() }
+            Pipeline.fromStream(stream, contextMock).apply { await() }
         }
 
         // then
@@ -130,7 +130,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).throughProcess(executableMock)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).throughProcess(executableMock)
         }
 
 
@@ -160,7 +160,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).throughLambda(lambda = lambda).apply { await() }
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).throughLambda(lambda = lambda).apply { await() }
         }
 
         // then
@@ -182,7 +182,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).toEndChannel(channel)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).toEndChannel(channel)
         }
 
         // then
@@ -207,7 +207,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).toDefaultEndChannel(channel)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).toDefaultEndChannel(channel)
         }
 
         // then
@@ -231,7 +231,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).toEndPacket(builder)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).toEndPacket(builder)
         }
 
         // then
@@ -253,7 +253,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).toEndStream(stream)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).toEndStream(stream)
         }
 
         // then
@@ -275,7 +275,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline(processExecutableSpy(), contextMock).toEndStringBuilder(builder)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock).toEndStringBuilder(builder)
         }
 
         // then

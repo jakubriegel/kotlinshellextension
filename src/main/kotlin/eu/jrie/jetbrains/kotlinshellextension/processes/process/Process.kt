@@ -38,7 +38,6 @@ protected constructor (
     protected abstract val statusOther: String
 
     internal suspend fun start() {
-        logger.debug("started $this")
         if (pcb.state != ProcessState.READY) {
             throw Exception("only READY process can be started")
         }
