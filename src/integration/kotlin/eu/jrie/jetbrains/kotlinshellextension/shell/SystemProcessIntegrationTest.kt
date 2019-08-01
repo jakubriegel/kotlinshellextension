@@ -1,67 +1,70 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertIterableEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 @ExperimentalCoroutinesApi
 class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
 
-//    @Test
-//    fun `should execute "echo hello world"`() {
-//        // when
-//        shell {
-//            systemProcess {
-//                cmd {
-//                    "echo" withArgs listOf("hello", "world")
-//                }
-//            } pipe storeResult
-//        }
-//
-//        // then
-//        assertEquals("hello world\n", readResult())
-//    }
+    @Test
+    fun `should execute "echo hello world"`() {
+        // when
+        shell {
+            systemProcess {
+                cmd {
+                    "echo" withArgs listOf("hello", "world")
+                }
+            } pipe storeResult
+        }
 
-//    @Test
-//    fun `should run process from command line"`() {
-//        // when
-//        shell {
-//            "echo hello world"() pipe ...
-//        }
-//
-//        // then
-//        // assert
-//    }
+        // then
+        assertEquals("hello world\n", readResult())
+    }
 
-//    @Test
-//    fun `should execute "ls -l"`() {
-//        // given
-//        file("file1")
-//        file("file2")
-//        dir()
-//
-//        val dirRegex = Regex("drw.+testdir\n")
-//        val fileRegex = Regex("-rw.+file[0-9]\n")
-//
-//        // when
-//        shell {
-//            systemProcess {
-//                cmd {
-//                    "ls" withArg "-l"
-//                }
-//            } pipe storeResult
-//
-//            commander.awaitAll()
-//        }
-//
-//        // then
-//        val result = readResult()
-//        assertRegex(dirRegex, result)
-//        assertRegex(fileRegex, result)
-//    }
+    @Test
+    fun `should run process from command line"`() {
+        // given
+        var process: Process? = null
+
+        // when
+        shell {
+            "echo hello world"()
+            process = processes.first()
+        }
+
+        // then
+        with(process!!) {
+            assertTrue(vPID > 0)
+            assertEquals(pcb.state, ProcessState.TERMINATED)
+        }
+    }
+
+    @Test
+    fun `should execute "ls -l"`() {
+        // given
+        file("file1")
+        file("file2")
+        dir()
+
+        val dirRegex = Regex("drw.+testdir\n")
+        val fileRegex = Regex("-rw.+file[0-9]\n")
+
+        // when
+        shell {
+            pipeline { "ls -ls".process() pipe storeResult }
+        }
+
+        // then
+        val result = readResult()
+        assertRegex(dirRegex, result)
+        assertRegex(fileRegex, result)
+    }
 
     @Test
     fun `should run process sequentially`() {
@@ -292,33 +295,27 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
         states.forEach { assertEquals(ProcessState.TERMINATED, it) }
     }
 
-//    @Test
-//    fun `should consume long line`() {
-//        // given
-//        val line = StringBuilder().let { b ->
-//            repeat(1024) { b.append("a") }
-//            b.toString()
-//        }
-//
-//        val code = "echo $line"
-//        val file = file(content = code)
-//
-//        // when
-//        shell {
-//            val chmod = launchSystemProcess {
-//                cmd {
-//                    "chmod" withArgs listOf("+x", file.name)
-//                }
-//            }
-//            commander.awaitProcess(chmod)
-//
-//            val echo = systemProcess { cmd = "./${file.name}" }
-//            val cat = systemProcess { cmd = "cat" }
-//            echo pipe cat pipe storeResult await all
-//        }
-//
-//        // then
-//        assertEquals(line.plus('\n'), readResult())
-//    }
+    @Test
+    fun `should consume long line`() {
+        // given
+        val line = StringBuilder().let { b ->
+            repeat(2048) { b.append("a") }
+            b.toString()
+        }
 
+        val code = "echo $line"
+        val file = file(content = code)
+
+        // when
+        shell {
+            "chmod +x ${file.name}"()
+
+            val echo = systemProcess { cmd = "./${file.name}" }
+            val cat = systemProcess { cmd = "cat" }
+            pipeline { echo pipe cat pipe storeResult }
+        }
+
+        // then
+        assertEquals(line.plus('\n'), readResult())
+    }
 }

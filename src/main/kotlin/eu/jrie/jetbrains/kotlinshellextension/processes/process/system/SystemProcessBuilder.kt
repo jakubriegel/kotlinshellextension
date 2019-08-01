@@ -20,11 +20,4 @@ class SystemProcessBuilder (
         stderr,
         scope
     )
-
-    companion object {
-        fun fromCommandLine(commandLine: String): ProcessBuilder {
-            val separated = commandLine.split(" ")
-            return SystemProcessBuilder(separated.first() , separated.drop(1))
-        }
-    }
 }
