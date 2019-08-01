@@ -1,30 +1,21 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
-import eu.jrie.jetbrains.kotlinshellextension.shell.ProcessBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import java.io.File
 import java.io.PrintStream
 
 @ExperimentalCoroutinesApi
-class PipingIntegrationTest : ProcessBaseIntegrationTest() {
-
+class PipingIntegrationTest : PipingBaseIntegrationTest() {
 
     @Test
-    fun `should pipe multiple processes to function`() {
-        // given
-        val content = "abc"
+    fun `should pipe "echo abc | cat | lambda"`() {
         // when
         shell {
             val echo = systemProcess {
-                cmd {
-                    "echo" withArg content
-                }
+                cmd { "echo" withArg content }
             }
-            val cat = systemProcess {
-                cmd = "cat"
-            }
+            val cat = systemProcess { cmd = "cat" }
 
             pipeline { echo pipe cat pipe storeResult }
         }
@@ -36,48 +27,42 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     fun `should pipe file to "grep "Llorem""`() {
         // given
         val file = file(content = LOREM_IPSUM)
+        val pattern = "[Ll]orem"
 
         // when
         shell {
             val grep = systemProcess {
-                cmd {
-                    "grep" withArg "[Ll]orem"
-                }
+                cmd { "grep" withArg pattern }
             }
 
             pipeline { file pipe grep pipe storeResult }
         }
 
         // then
-        val expected = "Lorem ipsum dolor sit amet,\n" +
-                       "Duis rhoncus purus sed lorem finibus,\n"
-        assertEquals(expected, readResult())
+        assertEquals(LOREM_IPSUM.grep(pattern), readResult())
     }
 
     @Test
-    fun `should pipe "file to grep "Llorem" | wc --chars"`() {
+    fun `should pipe "file to grep "Llorem" | wc -m"`() {
         // given
         val file = file(content = LOREM_IPSUM)
+        val pattern = "[Ll]orem"
 
         // when
         shell {
             val grep = systemProcess {
-                cmd {
-                    "grep" withArg "[Ll]orem"
-                }
+                cmd { "grep" withArg pattern }
             }
 
             val wc = systemProcess {
-                cmd {
-                    "wc" withArg "-m"
-                }
+                cmd { "wc" withArg "-m" }
             }
 
             pipeline { file pipe grep pipe wc pipe storeResult }
         }
 
         // then
-        val expected = "Lorem ipsum dolor sit amet,\nDuis rhoncus purus sed lorem finibus,\n".count()
+        val expected = LOREM_IPSUM.grep(pattern).count()
         assertRegex(Regex("[\n\t\r ]+$expected[\n\t\r ]+"), readResult())
     }
 
@@ -85,28 +70,25 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
     fun `should pipe "file to grep "Llorem" | wc --chars to file"`() {
         // given
         val file = file(content = LOREM_IPSUM)
+        val resultFile = file("result")
+        val pattern = "[Ll]orem"
 
         // when
         shell {
             val grep = systemProcess {
-                cmd {
-                    "grep" withArg "[Ll]orem"
-                }
+                cmd { "grep" withArg pattern }
             }
 
             val wc = systemProcess {
-                cmd {
-                    "wc" withArg "-m"
-                }
+                cmd { "wc" withArg "-m" }
             }
 
-            file pipe grep pipe wc pipe file("result")
+            file pipe grep pipe wc pipe resultFile
         }
 
         // then
-        val expected = "Lorem ipsum dolor sit amet,\nDuis rhoncus purus sed lorem finibus,\n".count()
-        val result = File("$directoryPath/result").readText()
-        assertRegex(Regex("[\n\t\r ]+$expected[\n\t\r ]+"), result)
+        val expected = LOREM_IPSUM.grep(pattern).count()
+        assertRegex(Regex("[\n\t\r ]+$expected[\n\t\r ]+"), resultFile.readText())
     }
 
     @Test
@@ -114,14 +96,11 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
         // given
         val outFile = file("console")
         System.setOut(PrintStream(outFile))
-        val content = "abc"
 
         // when
         shell {
             val echo = systemProcess {
-                cmd {
-                    "echo" withArg content
-                }
+                cmd { "echo" withArg content }
             }
 
             echo pipe stdout await all
@@ -137,7 +116,6 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
         // given
         val outFile = file("console")
         System.setOut(PrintStream(outFile))
-        val content = "abc"
 
         // when
         shell {
@@ -152,43 +130,34 @@ class PipingIntegrationTest : ProcessBaseIntegrationTest() {
         assertRegex(Regex(content), outFile.readText())
     }
 
-//    @Test
-//    fun `should pipe long stream`() {
-//        // given
-//        val n = 1000
-//        val file = scriptFile(n)
-//        val pattern = "2"
-//
-//        // when
-//        shell {
-//            val script = systemProcess {
-//                cmd = "./${file.name}"
-//            }
-//
-//            val grep = systemProcess {
-//                cmd { "grep" withArg pattern }
-//            }
-//
-//            (script forkErr nulloutOld) pipe grep pipe storeResult
-//        }
-//
-//        // then
-//        assertEquals(scriptStdOut(n).grep(pattern), readResult())
-//    }
+    @Test
+    fun `should pipe long stream`() {
+        // given
+        val n = 100_000
+        val file = scriptFile(n)
+        val pattern = "2"
+
+        // when
+        shell {
+            val script = systemProcess { cmd = "./${file.name}" }
+            val grep = systemProcess { cmd { "grep" withArg pattern } }
+
+            (script forkErr nullout) pipe grep pipe storeResult
+        }
+
+        // then
+        assertEquals(scriptStdOut(n).grep(pattern), readResult())
+    }
 
     @Test
     fun `should make pipeline with non DSL api`() {
         // when
         shell {
             val echo = systemProcess {
-                cmd {
-                    "echo" withArg "abc\ndef"
-                }
+                cmd { "echo" withArg "abc\ndef" }
             }
             val grep = systemProcess {
-                cmd {
-                    "grep" withArg "c"
-                }
+                cmd { "grep" withArg "c" }
             }
 
             from(echo)
