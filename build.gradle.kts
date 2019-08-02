@@ -14,10 +14,10 @@ repositories {
 }
 
 dependencies {
-    compile(kotlin("reflect"))
+    api(kotlin("reflect"))
     implementation(kotlin("stdlib-jdk8"))
 
-    implementation("org.zeroturnaround:zt-exec:1.10")
+    implementation("org.zeroturnaround:zt-exec:1.11")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-M2")
     implementation("org.jetbrains.kotlinx:kotlinx-io-jvm:0.1.11")
