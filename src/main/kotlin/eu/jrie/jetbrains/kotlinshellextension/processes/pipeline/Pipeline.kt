@@ -35,7 +35,9 @@ typealias PipelineContextLambda = suspend (context: ExecutionContext) -> Unit
  */
 @ExperimentalCoroutinesApi
 class Pipeline @TestOnly internal constructor (
-    private val context: ProcessExecutionContext
+    private val context: ProcessExecutionContext,
+    private val rwPacketSize: Long,
+    private val channelBufferSize: Int
 ) {
     /**
      * Indicates wheater this [Pipeline] has ending element.
@@ -195,7 +197,7 @@ class Pipeline @TestOnly internal constructor (
     /**
      * Returns new [ProcessSendChannel] and sets it as [lastOut]
      */
-    private fun channel(): ProcessSendChannel = Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also { lastOut = it }
+    private fun channel(): ProcessSendChannel = Channel<ProcessChannelUnit>(channelBufferSize).also { lastOut = it }
 
     private fun launch(block: suspend CoroutineScope.() -> Unit) {
         asyncJobs.add(context.commander.scope.launch(block = block))
@@ -207,15 +209,14 @@ class Pipeline @TestOnly internal constructor (
     }
 
     companion object {
-        private const val PIPELINE_CHANNEL_PACKET_SIZE: Long = 256
-        private const val PIPELINE_CHANNEL_BUFFER_SIZE = 16
-
         /**
          * Starts new [Pipeline] with process specified by given [ProcessExecutable]
          *
          * @see ShellPiping
          */
-        internal suspend fun fromProcess(process: ProcessExecutable, context: ProcessExecutionContext) = Pipeline(context)
+        internal suspend fun fromProcess(
+            process: ProcessExecutable, context: ProcessExecutionContext, rwPacketSize: Long, channelBufferSize: Int
+        ) = Pipeline(context, rwPacketSize, channelBufferSize)
             .apply { addProcess(process) }
 
         /**
@@ -223,7 +224,9 @@ class Pipeline @TestOnly internal constructor (
          *
          * @see ShellPiping
          */
-        internal suspend fun fromLambda(lambda: PipelineContextLambda, context: ProcessExecutionContext) = Pipeline(context)
+        internal suspend fun fromLambda(
+            lambda: PipelineContextLambda, context: ProcessExecutionContext, rwPacketSize: Long, channelBufferSize: Int
+        ) = Pipeline(context, rwPacketSize, channelBufferSize)
             .apply { addLambda(lambda, end = false, closeOut = true) }
 
         /**
@@ -231,7 +234,9 @@ class Pipeline @TestOnly internal constructor (
          *
          * @see ShellPiping
          */
-        internal fun fromChannel(channel: ProcessReceiveChannel, context: ProcessExecutionContext) = Pipeline(context)
+        internal fun fromChannel(
+            channel: ProcessReceiveChannel, context: ProcessExecutionContext, rwPacketSize: Long, channelBufferSize: Int
+        ) = Pipeline(context, rwPacketSize, channelBufferSize)
             .apply { lastOut = channel }
 
         /**
@@ -239,7 +244,9 @@ class Pipeline @TestOnly internal constructor (
          *
          * @see ShellPiping
          */
-        internal suspend fun fromStream(stream: InputStream, context: ProcessExecutionContext) = Pipeline(context)
+        internal suspend fun fromStream(
+            stream: InputStream, context: ProcessExecutionContext, rwPacketSize: Long, channelBufferSize: Int
+        ) = Pipeline(context, rwPacketSize, channelBufferSize)
             .apply { addLambda(stream.readFully(), end = false, closeOut = true) }
 
         private val logger = LoggerFactory.getLogger(Pipeline::class.java)
@@ -272,9 +279,9 @@ class Pipeline @TestOnly internal constructor (
     private fun InputStream.readFully(): PipelineContextLambda = { ctx ->
         use {
             do {
-                val packet = it.readPacketAtMost(PIPELINE_CHANNEL_PACKET_SIZE)
+                val packet = it.readPacketAtMost(rwPacketSize)
                 ctx.stdout.send(packet)
-            } while (packet.remaining == PIPELINE_CHANNEL_PACKET_SIZE)
+            } while (packet.remaining == rwPacketSize)
         }
     }
 }

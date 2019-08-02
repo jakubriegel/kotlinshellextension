@@ -6,6 +6,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecuti
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
+@Suppress("PropertyName")
 @ExperimentalCoroutinesApi
 interface ShellBase : ProcessExecutionContext {
     /**
@@ -15,7 +16,6 @@ interface ShellBase : ProcessExecutionContext {
      * @see [variables]
      */
     val environment: Map<String, String>
-
     /**
      * Variables of this shell.
      * These variables are not being inherited to sub shells.
@@ -23,7 +23,6 @@ interface ShellBase : ProcessExecutionContext {
      * @see [environment]
      */
     val variables: Map<String, String>
-
     /**
      * Current directory of this shell
      */
@@ -37,4 +36,9 @@ interface ShellBase : ProcessExecutionContext {
         stdout.close()
         stderr.close()
     }
+
+    val SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE: Int
+    val PIPELINE_RW_PACKET_SIZE: Long
+    val PIPELINE_CHANNEL_BUFFER_SIZE: Int
+
 }

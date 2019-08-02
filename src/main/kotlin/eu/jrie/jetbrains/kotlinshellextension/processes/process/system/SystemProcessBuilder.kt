@@ -5,7 +5,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class SystemProcessBuilder (
     val command: String,
-    val arguments: List<String> = emptyList()
+    val arguments: List<String> = emptyList(),
+    val systemProcessInputStreamBufferSize: Int
 ) : ProcessBuilder() {
 
     @ExperimentalCoroutinesApi
@@ -18,6 +19,7 @@ class SystemProcessBuilder (
         stdin,
         stdout,
         stderr,
-        scope
+        scope,
+        systemProcessInputStreamBufferSize
     )
 }

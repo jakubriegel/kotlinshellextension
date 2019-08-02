@@ -19,7 +19,9 @@ interface ShellPipingFromChannel : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    fun from(channel: ProcessReceiveChannel) = Pipeline.fromChannel(channel, this)
+    fun from(channel: ProcessReceiveChannel) = Pipeline.fromChannel(
+        channel, this, PIPELINE_RW_PACKET_SIZE, PIPELINE_CHANNEL_BUFFER_SIZE
+    )
 
     /**
      * Starts new [Pipeline] from this [ProcessReceiveChannel] to [process].

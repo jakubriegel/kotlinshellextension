@@ -19,7 +19,9 @@ interface ShellPipingFromStream : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    suspend fun from(stream: InputStream) = Pipeline.fromStream(stream, this)
+    suspend fun from(stream: InputStream) = Pipeline.fromStream(
+        stream, this, PIPELINE_RW_PACKET_SIZE, PIPELINE_CHANNEL_BUFFER_SIZE
+    )
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [process].

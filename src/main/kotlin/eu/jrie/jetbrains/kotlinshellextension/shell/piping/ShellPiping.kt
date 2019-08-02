@@ -55,7 +55,7 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
     private suspend fun forkStdErr(process: ProcessExecutable, fork: PipelineFork) {
         forkStdErr(
             process,
-            Channel<ProcessChannelUnit>(16).also {
+            Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also {
                 fork(it)
                 process.afterAwait = { it.close() }
             }

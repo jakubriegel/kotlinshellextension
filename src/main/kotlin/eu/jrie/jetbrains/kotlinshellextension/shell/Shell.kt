@@ -26,7 +26,10 @@ open class Shell private constructor (
     environment: Map<String, String>,
     variables: Map<String, String>,
     directory: File,
-    final override val commander: ProcessCommander
+    final override val commander: ProcessCommander,
+    override val SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE: Int,
+    override val PIPELINE_RW_PACKET_SIZE: Long,
+    override val PIPELINE_CHANNEL_BUFFER_SIZE: Int
 ) : ShellPiping, ShellProcess, ShellManagement {
 
     final override val nullin: ProcessReceiveChannel = Channel<ProcessChannelUnit>().apply { close() }
@@ -61,7 +64,7 @@ open class Shell private constructor (
     private val detachedPipelines = mutableListOf<Pipeline>()//Pair<Pipeline, Job>>()
 
     init {
-        val systemOutChannel: ProcessChannel = Channel(16)
+        val systemOutChannel: ProcessChannel = Channel(PIPELINE_CHANNEL_BUFFER_SIZE)
         commander.scope.launch (Dispatchers.IO) {
             systemOutChannel.consumeEach {
                 System.out.writePacket(it)
@@ -137,18 +140,36 @@ open class Shell private constructor (
         vars: Map<String, String> = emptyMap(),
         dir: File = directory,
         script: suspend Shell.() -> Unit
-    ) = Shell(environment, vars, dir, commander)
+    ) = Shell(
+        environment,
+        vars,
+        dir,
+        commander,
+        SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE,
+        PIPELINE_RW_PACKET_SIZE,
+        PIPELINE_CHANNEL_BUFFER_SIZE
+    )
         .apply { script() }
         .finalize()
 
     companion object {
 
-        internal fun build(env: Map<String, String>?, dir: File?, commander: ProcessCommander) =
+        internal fun build(
+            env: Map<String, String>?,
+            dir: File?,
+            commander: ProcessCommander,
+            systemProcessInputStreamBufferSize: Int,
+            pipelineRwPacketSize: Long,
+            pipelineChannelBufferSize: Int
+        ) =
             Shell(
                 env ?: emptyMap(),
                 emptyMap(),
                 assertDir(dir?.canonicalFile ?: currentDir()),
-                commander
+                commander,
+                systemProcessInputStreamBufferSize,
+                pipelineRwPacketSize,
+                pipelineChannelBufferSize
             )
 
         private fun currentDir(): File {

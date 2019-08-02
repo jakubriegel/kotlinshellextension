@@ -61,7 +61,7 @@ abstract class BaseIntegrationTest {
         dir: File? = directory,
         script: ShellScript
     ) = runBlocking {
-        eu.jrie.jetbrains.kotlinshellextension.shell.shell(env, dir, this, script)
+        eu.jrie.jetbrains.kotlinshellextension.shell.shell(env, dir, this) { script() }
     }
 
     companion object {

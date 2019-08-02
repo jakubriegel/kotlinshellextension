@@ -21,14 +21,13 @@ typealias ProcessChannel = Channel<ProcessChannelUnit>
 typealias ProcessReceiveChannel = ReceiveChannel<ProcessChannelUnit>
 typealias ProcessSendChannel = SendChannel<ProcessChannelUnit>
 
-private const val BUFFER_SIZE = 4
-
 internal class ProcessChannelInputStream (
     private val channel: ProcessReceiveChannel,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    bufferSize: Int
 ) : InputStream() {
 
-    private val buffer = IoBuffer(ByteBuffer.allocate(BUFFER_SIZE))
+    private val buffer = IoBuffer(ByteBuffer.allocate(bufferSize))
 
     private var stream: InputStream? = null
 
@@ -73,10 +72,11 @@ internal class ProcessChannelInputStream (
 
 internal class ProcessChannelOutputStream (
     private val channel: ProcessSendChannel,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    bufferSize: Int
 ) : OutputStream() {
 
-    private val buffer = IoBuffer(ByteBuffer.allocate(BUFFER_SIZE))
+    private val buffer = IoBuffer(ByteBuffer.allocate(bufferSize))
 
     override fun write(b: Int) {
         if (!buffer.canWrite()) flush()
@@ -84,7 +84,7 @@ internal class ProcessChannelOutputStream (
     }
 
     override fun flush() {
-        val packet = buildPacket { this.writeFully(buffer.readBytes()) }//while (buffer.canRead()) this.writeByte(buffer.readInt().toByte()) }
+        val packet = buildPacket { this.writeFully(buffer.readBytes()) }
         runBlocking (scope.coroutineContext) { channel.send(packet) }
         buffer.resetForWrite()
     }
