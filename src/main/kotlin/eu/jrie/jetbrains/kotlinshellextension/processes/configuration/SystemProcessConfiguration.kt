@@ -4,7 +4,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.system.SystemPro
 
 class SystemProcessConfiguration : ProcessConfiguration() {
 
-    override fun createBuilder() = SystemProcessBuilder(cmd, args)
+    override fun createBuilder() = SystemProcessBuilder(cmd, args, systemProcessInputStreamBufferSize)
 
     var cmd: String = ""
 
@@ -22,4 +22,7 @@ class SystemProcessConfiguration : ProcessConfiguration() {
         cmd = this
         args = listOf(argument)
     }
+
+    var systemProcessInputStreamBufferSize: Int = -1
+
 }

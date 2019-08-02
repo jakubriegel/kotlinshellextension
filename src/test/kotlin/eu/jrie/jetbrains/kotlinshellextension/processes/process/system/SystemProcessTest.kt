@@ -296,7 +296,8 @@ class SystemProcessTest {
             Channel(),
             Channel(),
             this,
-            executorMock
+            executorMock,
+            1
         )
         val result = test()
         result

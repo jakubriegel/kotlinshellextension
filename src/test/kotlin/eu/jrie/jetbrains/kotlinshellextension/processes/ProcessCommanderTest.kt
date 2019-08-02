@@ -34,7 +34,7 @@ class ProcessCommanderTest {
         // given
         val scope = this
         val c = ProcessCommander(scope)
-        val builder = spyk(SystemProcessBuilder(PROCESS_COMMAND)).withChannels()
+        val builder = spyk(SystemProcessBuilder(PROCESS_COMMAND, systemProcessInputStreamBufferSize = 1)).withChannels()
 
         // when
         val process = c.createProcess(builder)
@@ -53,8 +53,8 @@ class ProcessCommanderTest {
     fun `should assign unique vPID to process`() = runBlocking {
         // given
         val c = ProcessCommander(this)
-        val builder1 = spyk(SystemProcessBuilder(PROCESS_COMMAND)).withChannels()
-        val builder2 = spyk(SystemProcessBuilder(PROCESS_COMMAND)).withChannels()
+        val builder1 = spyk(SystemProcessBuilder(PROCESS_COMMAND, systemProcessInputStreamBufferSize = 1)).withChannels()
+        val builder2 = spyk(SystemProcessBuilder(PROCESS_COMMAND, systemProcessInputStreamBufferSize = 1)).withChannels()
 
         // when
         val process1 = c.createProcess(builder1)

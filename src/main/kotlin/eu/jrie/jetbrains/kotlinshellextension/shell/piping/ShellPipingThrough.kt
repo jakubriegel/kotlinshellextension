@@ -87,7 +87,7 @@ interface ShellPipingThrough : ShellPipingTo {
 
     /**
      * Constructs [PipelineByteArrayLambda] to be used in piping
-     * Part of piping DSL
+     * Part of piping DS
      */
     fun byteArrayLambda(
         lambda: PipelineByteArrayLambda
@@ -112,9 +112,9 @@ interface ShellPipingThrough : ShellPipingTo {
      * Part of piping DSL
      */
     fun streamLambda(lambda: PipelineStreamLambda) = contextLambda { ctx ->
-        val inStream = ProcessChannelInputStream(ctx.stdin, this.commander.scope)
-        val stdStream = ProcessChannelOutputStream(ctx.stdout, this.commander.scope)
-        val errStream = ProcessChannelOutputStream(ctx.stderr, this.commander.scope)
+        val inStream = ProcessChannelInputStream(ctx.stdin, this.commander.scope, PIPELINE_CHANNEL_BUFFER_SIZE)
+        val stdStream = ProcessChannelOutputStream(ctx.stdout, this.commander.scope, PIPELINE_CHANNEL_BUFFER_SIZE)
+        val errStream = ProcessChannelOutputStream(ctx.stderr, this.commander.scope, PIPELINE_CHANNEL_BUFFER_SIZE)
         lambda(inStream, stdStream, errStream)
     }
 

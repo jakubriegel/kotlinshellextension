@@ -32,7 +32,8 @@ class SystemProcess @TestOnly internal constructor (
     stdout: ProcessSendChannel,
     stderr: ProcessSendChannel,
     scope: CoroutineScope,
-    private val executor: ProcessExecutor
+    private val executor: ProcessExecutor,
+    private val systemProcessInputStreamBufferSize: Int
 ) : Process(vPID, environment, directory, stdin, stdout, stderr, scope) {
 
     constructor(vPID: Int,
@@ -43,8 +44,12 @@ class SystemProcess @TestOnly internal constructor (
                 stdin: ProcessReceiveChannel,
                 stdout: ProcessSendChannel,
                 stderr: ProcessSendChannel,
-                scope: CoroutineScope
-    ) : this(vPID, command, arguments, environment, directory, stdin, stdout, stderr, scope, ProcessExecutor())
+                scope: CoroutineScope,
+                systemProcessInputStreamBufferSize: Int
+    ) : this(
+        vPID, command, arguments, environment, directory, stdin, stdout, stderr,
+        scope, ProcessExecutor(), systemProcessInputStreamBufferSize
+    )
 
     override val pcb = SystemPCB()
 
@@ -111,10 +116,11 @@ class SystemProcess @TestOnly internal constructor (
 
     internal class SystemProcessInputStream (
         private val tap: ProcessReceiveChannel,
-        private val scope: CoroutineScope
+        private val scope: CoroutineScope,
+        private val bufferSize: Int
     ) : InputStream() {
 
-        private val buffer = ByteBuffer.allocate(INPUT_STREAM_BUFFER_SIZE).apply { flip() }
+        private val buffer = ByteBuffer.allocate(bufferSize).apply { flip() }
 
         private var stream: InputStream? = null
 
@@ -147,7 +153,7 @@ class SystemProcess @TestOnly internal constructor (
 
         private fun readStream() {
             stream!!.let {
-                while (buffer.position() < INPUT_STREAM_BUFFER_SIZE) {
+                while (buffer.position() < bufferSize) {
                     val b = it.read().toByte()
                     if (b == MINUS_ONE) break
                     else buffer.put(b)
@@ -165,7 +171,7 @@ class SystemProcess @TestOnly internal constructor (
     }
 
     private fun ProcessExecutor.redirectInput() = apply {
-        redirectInput(SystemProcessInputStream(stdin, scope))
+        redirectInput(SystemProcessInputStream(stdin, scope, systemProcessInputStreamBufferSize))
     }
 
     private fun ProcessExecutor.redirectOutput() = apply {
@@ -179,9 +185,5 @@ class SystemProcess @TestOnly internal constructor (
 
     @ObsoleteCoroutinesApi
     private fun wrapThread(name: String, block: () -> Unit) = scope.launch(newSingleThreadContext(name)) { block() }
-
-    companion object {
-        private const val INPUT_STREAM_BUFFER_SIZE = 512
-    }
 
 }

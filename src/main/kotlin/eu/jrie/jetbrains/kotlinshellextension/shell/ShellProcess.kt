@@ -43,6 +43,7 @@ interface ShellProcess : ShellBase {
      */
     fun systemBuilder(config: SystemProcessConfiguration.() -> Unit) = SystemProcessConfiguration()
         .apply(config)
+        .apply { systemProcessInputStreamBufferSize = SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE }
         .configureBuilder()
 
     /**

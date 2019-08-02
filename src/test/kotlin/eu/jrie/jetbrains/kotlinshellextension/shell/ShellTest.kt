@@ -67,7 +67,7 @@ class ShellTest {
     }
 
     private fun <T> runTest(test: suspend ShellTest.() -> T) = runBlocking {
-        shell = Shell.build(null, null, spyk(ProcessCommander(this)))
+        shell = Shell.build(null, null, spyk(ProcessCommander(this)), 1, 1, 1)
         val result = test()
         shell.finalize()
         result
