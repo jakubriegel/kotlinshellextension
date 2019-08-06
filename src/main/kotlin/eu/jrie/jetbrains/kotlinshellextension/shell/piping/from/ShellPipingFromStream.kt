@@ -4,24 +4,44 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecuta
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineContextLambda
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
-import eu.jrie.jetbrains.kotlinshellextension.shell.piping.ShellPipingThrough
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.io.core.BytePacketBuilder
+import kotlinx.io.streams.readPacketAtMost
+import java.io.EOFException
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
-interface ShellPipingFromStream : ShellPipingThrough {
+interface ShellPipingFromStream : ShellPipingFromLambda {
     /**
      * Starts new [Pipeline] from [stream].
      * Shall be wrapped with piping DSL
      *
      * @return this [Pipeline]
      */
-    suspend fun from(stream: InputStream) = Pipeline.fromStream(
-        stream, this, PIPELINE_RW_PACKET_SIZE, PIPELINE_CHANNEL_BUFFER_SIZE
-    )
+    suspend fun from(stream: InputStream) = from(stream.readFully())
+
+    /**
+     * Starts new [Pipeline] from [stream] and closes the [stream] after using it.
+     * Shall be wrapped with piping DSL
+     *
+     * @return this [Pipeline]
+     */
+    suspend fun fromUse(stream: InputStream) = from(stream.useFully())
+
+    private fun InputStream.readFully() = contextLambda {
+        try {
+            do {
+                val packet = readPacketAtMost(PIPELINE_RW_PACKET_SIZE)
+                it.stdout.send(packet)
+            } while (packet.remaining == PIPELINE_RW_PACKET_SIZE)
+        } catch (e: EOFException) {}
+    }
+
+    private fun InputStream.useFully() = contextLambda { ctx ->
+        use { readFully().invoke(ctx) }
+    }
 
     /**
      * Starts new [Pipeline] from this [InputStream] to [process].

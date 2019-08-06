@@ -17,7 +17,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(process: ProcessExecutable) = from(this.inputStream()) pipe process
+    suspend infix fun File.pipe(process: ProcessExecutable) = fromUse(this.inputStream()) pipe process
 
     /**
      * Starts new [Pipeline] from this [File] to [lambda].
@@ -25,7 +25,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(lambda: PipelineContextLambda) = from(this.inputStream()) pipe lambda
+    suspend infix fun File.pipe(lambda: PipelineContextLambda) = fromUse(this.inputStream()) pipe lambda
 
     /**
      * Starts new [Pipeline] from this [File] to [channel].
@@ -33,7 +33,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(channel: ProcessSendChannel) = from(this.inputStream()) pipe channel
+    suspend infix fun File.pipe(channel: ProcessSendChannel) = fromUse(this.inputStream()) pipe channel
 
     /**
      * Starts new [Pipeline] from this [File] to [packetBuilder].
@@ -41,7 +41,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(packetBuilder: BytePacketBuilder) = from(this.inputStream()) pipe packetBuilder
+    suspend infix fun File.pipe(packetBuilder: BytePacketBuilder) = fromUse(this.inputStream()) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from this [File] to [stream].
@@ -49,7 +49,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(stream: OutputStream) = from(this.inputStream()) pipe stream
+    suspend infix fun File.pipe(stream: OutputStream) = fromUse(this.inputStream()) pipe stream
 
     /**
      * Starts new [Pipeline] from this [File] to [file].
@@ -57,7 +57,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(file: File) = from(this.inputStream()) pipe file
+    suspend infix fun File.pipe(file: File) = fromUse(this.inputStream()) pipe file
 
     /**
      * Starts new [Pipeline] from this [File] and appends [file].
@@ -65,7 +65,7 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipeAppend(file: File) = from(this.inputStream()) pipeAppend  file
+    suspend infix fun File.pipeAppend(file: File) = fromUse(this.inputStream()) pipeAppend  file
 
     /**
      * Starts new [Pipeline] from this [File] to [stringBuilder].
@@ -73,5 +73,5 @@ interface ShellPipingFromFile : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun File.pipe(stringBuilder: StringBuilder) = from(this.inputStream()) pipe stringBuilder
+    suspend infix fun File.pipe(stringBuilder: StringBuilder) = fromUse(this.inputStream()) pipe stringBuilder
 }

@@ -19,7 +19,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(process: ProcessExecutable) = from(this.inputStream()) pipe process
+    suspend infix fun ByteReadPacket.pipe(process: ProcessExecutable) = fromUse(this.inputStream()) pipe process
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [lambda].
@@ -27,7 +27,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(lambda: PipelineContextLambda) = from(this.inputStream()) pipe lambda
+    suspend infix fun ByteReadPacket.pipe(lambda: PipelineContextLambda) = fromUse(this.inputStream()) pipe lambda
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [channel].
@@ -35,7 +35,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(channel: ProcessSendChannel) = from(this.inputStream()) pipe channel
+    suspend infix fun ByteReadPacket.pipe(channel: ProcessSendChannel) = fromUse(this.inputStream()) pipe channel
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [packetBuilder].
@@ -43,7 +43,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(packetBuilder: BytePacketBuilder) = from(this.inputStream()) pipe packetBuilder
+    suspend infix fun ByteReadPacket.pipe(packetBuilder: BytePacketBuilder) = fromUse(this.inputStream()) pipe packetBuilder
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [stream].
@@ -51,7 +51,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(stream: OutputStream) = from(this.inputStream()) pipe stream
+    suspend infix fun ByteReadPacket.pipe(stream: OutputStream) = fromUse(this.inputStream()) pipe stream
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [file].
@@ -59,7 +59,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(file: File) = from(this.inputStream()) pipe file
+    suspend infix fun ByteReadPacket.pipe(file: File) = fromUse(this.inputStream()) pipe file
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] and appends [file].
@@ -67,7 +67,7 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipeAppend(file: File) = from(this.inputStream()) pipeAppend  file
+    suspend infix fun ByteReadPacket.pipeAppend(file: File) = fromUse(this.inputStream()) pipeAppend  file
 
     /**
      * Starts new [Pipeline] from this [ByteReadPacket] to [stringBuilder].
@@ -75,6 +75,6 @@ interface ShellPipingFromByteReadPacket : ShellPipingFromStream {
      *
      * @return this [Pipeline]
      */
-    suspend infix fun ByteReadPacket.pipe(stringBuilder: StringBuilder) = from(this.inputStream()) pipe stringBuilder
+    suspend infix fun ByteReadPacket.pipe(stringBuilder: StringBuilder) = fromUse(this.inputStream()) pipe stringBuilder
 
 }

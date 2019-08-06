@@ -18,9 +18,7 @@ interface ShellPipingFromLambda : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    suspend fun from(lambda: PipelineContextLambda) = Pipeline.fromLambda(
-        lambda, this, PIPELINE_RW_PACKET_SIZE, PIPELINE_CHANNEL_BUFFER_SIZE
-    )
+    suspend fun from(lambda: PipelineContextLambda) = Pipeline.fromLambda(lambda, this, PIPELINE_CHANNEL_BUFFER_SIZE)
 
     /**
      * Starts new [Pipeline] from this lambda to [process].

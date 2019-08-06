@@ -19,9 +19,7 @@ interface ShellPipingFromProcess : ShellPipingThrough {
      *
      * @return this [Pipeline]
      */
-    suspend fun from(process: ProcessExecutable) = Pipeline.fromProcess(
-        process, this, PIPELINE_RW_PACKET_SIZE, PIPELINE_CHANNEL_BUFFER_SIZE
-    )
+    suspend fun from(process: ProcessExecutable) = Pipeline.fromProcess(process, this, PIPELINE_CHANNEL_BUFFER_SIZE)
 
     /**
      * Starts new [Pipeline] from process ran by this [ProcessExecutable] to one specified by [process].
