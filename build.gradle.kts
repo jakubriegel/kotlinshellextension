@@ -1,27 +1,32 @@
+import com.jfrog.bintray.gradle.BintrayExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.3.40"
+    kotlin("jvm") version "1.3.41"
+    maven
+    `maven-publish`
+    id("com.jfrog.bintray") version "1.8.4"
 }
 
 group = "eu.jrie.jetbrains"
-version = "1.0-SNAPSHOT"
+version = "0.1"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile(kotlin("reflect"))
+    implementation(kotlin("reflect"))
     implementation(kotlin("stdlib-jdk8"))
 
-    implementation("org.zeroturnaround:zt-exec:1.10")
+    api("org.zeroturnaround:zt-exec:1.11")
+    api("org.slf4j:slf4j-api:1.7.26")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-M2")
-    implementation("org.jetbrains.kotlinx:kotlinx-io-jvm:0.1.11")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-M2")
+    api("org.jetbrains.kotlinx:kotlinx-io-jvm:0.1.11")
 
-    testCompile(kotlin("reflect"))
+    testImplementation(kotlin("reflect"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.0")
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("org.apache.logging.log4j:log4j-core:2.12.0")
@@ -50,9 +55,41 @@ task<Test>("integration") {
 
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "9"
+    kotlinOptions.jvmTarget = "1.8"
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+val bintrayPublication = "kse"
+
+publishing {
+    publications {
+        create<MavenPublication>(bintrayPublication) {
+            from(components["kotlin"])
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
+    }
+}
+
+bintray {
+    user = System.getenv("BINTRAY_USER")
+    key = System.getenv("BINTRAY_KEY")
+    setPublications(bintrayPublication)
+    publish = true
+    pkg (delegateClosureOf<BintrayExtension.PackageConfig> {
+        repo = "KotlinShell"
+        name = "kotlin-shellextension"
+        userOrg = "jakubriegel"
+        websiteUrl = ""
+        githubRepo = "jakubriegel/kotlinshellextension"
+        vcsUrl = "https://github.com/jakubriegel/kotlinshellextension.git"
+        description = "Library for performing shell-like programing in Kotlin. Includes process management and piping."
+        setLabels("kotlin", "shell", "pipeline", "process-management")
+        setLicenses("apache2")
+        desc = description
+    })
 }

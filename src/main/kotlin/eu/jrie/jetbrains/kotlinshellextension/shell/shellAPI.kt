@@ -14,6 +14,9 @@ const val DEFAULT_SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE: Int = 512
 const val DEFAULT_PIPELINE_RW_PACKET_SIZE: Long = 256
 const val DEFAULT_PIPELINE_CHANNEL_BUFFER_SIZE: Int = 16
 
+/**
+ * Creates new [Shell] with given parameters and executes the [script]
+ */
 @ExperimentalCoroutinesApi
 suspend fun shell(
     env: Map<String, String>? = null,
@@ -34,6 +37,9 @@ suspend fun shell(
     )
 }
 
+/**
+ * Creates new [Shell] with given parameters and executes the [script]
+ */
 @ExperimentalCoroutinesApi
 suspend fun shell(
     env: Map<String, String>? = null,

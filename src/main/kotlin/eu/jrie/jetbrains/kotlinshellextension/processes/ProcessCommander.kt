@@ -7,7 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
 
 @ExperimentalCoroutinesApi
-class ProcessCommander internal constructor (
+class ProcessCommander (
     val scope: CoroutineScope
 ) {
 
