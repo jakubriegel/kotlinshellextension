@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 @ExperimentalCoroutinesApi
-open class Shell private constructor (
+open class Shell protected constructor (
     environment: Map<String, String>,
     variables: Map<String, String>,
     directory: File,

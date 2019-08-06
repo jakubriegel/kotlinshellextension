@@ -73,7 +73,7 @@ abstract class ProcessBuilder {
      * @return this builder
      */
     internal fun withDir(dir: File) = apply {
-        if (!dir.isDirectory) throw Exception("Process must be executed fromBuffer directory")
+        if (!dir.isDirectory) throw Exception("Process must be executed from directory")
         directory = dir
     }
 
