@@ -219,7 +219,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess { cmd = "./${file.name}" }
             detach(script)
             delay(50)
-            script.process.await()
+            script.process.join()
             stateAfterAttach = processes.first().pcb.state
         }
 
@@ -265,7 +265,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             "./${scriptCode.name}"()
             "./${scriptCode.name}"()
 
-            awaitAll()
+            joinAll()
             states.addAll(processes.map { it.pcb.state })
         }
 

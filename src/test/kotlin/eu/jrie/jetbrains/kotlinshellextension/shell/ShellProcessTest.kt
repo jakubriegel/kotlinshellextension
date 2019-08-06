@@ -159,7 +159,7 @@ class ShellProcessTest {
     @Test
     fun `should await process`() = runBlocking {
         // when
-        with(shell) { runningProcessMock.await() }
+        with(shell) { runningProcessMock.join() }
 
         // then
         coVerify { commanderMock.awaitProcess(runningProcessMock) }
@@ -168,7 +168,7 @@ class ShellProcessTest {
     @Test
     fun `should await all processes`() = runBlocking {
         // when
-        with(shell) { awaitAll() }
+        with(shell) { joinAll() }
 
         // then
         coVerify { commanderMock.awaitAll() }

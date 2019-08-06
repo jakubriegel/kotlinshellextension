@@ -64,7 +64,7 @@ class PipingSynchronizingIntegrationTest : PipingBaseIntegrationTest() {
             delay(5)
             pipeline.processes.forEach { statesAfterDetach.add(it.pcb.state.name) }
 
-            pipeline.await()
+            pipeline.join()
             pipeline.processes.forEach { statesAfterAwait.add(it.pcb.state.name) }
         }
 

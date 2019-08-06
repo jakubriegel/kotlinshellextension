@@ -68,7 +68,7 @@ class PipingForkIntegrationTest : PipingBaseIntegrationTest() {
                 cmd { cmd = "./${code.name}" }
             }
 
-            (script forkErr { it pipe nullout }) pipe grep pipe storeResult await all
+            (script forkErr { it pipe nullout }) pipe grep pipe storeResult join it
         }
 
         // then

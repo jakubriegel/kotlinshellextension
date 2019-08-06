@@ -120,9 +120,9 @@ interface ShellProcess : ShellBase {
 
     suspend fun daemon(vararg executable: ProcessExecutable) = executable.forEach { daemon(it) }
 
-    suspend fun Process.await() = commander.awaitProcess(this)
+    suspend fun Process.join() = commander.awaitProcess(this)
 
-    suspend fun awaitAll() = commander.awaitAll()
+    suspend fun joinAll() = commander.awaitAll()
 
     suspend fun Process.kill() = kill(this)
 

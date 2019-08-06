@@ -98,20 +98,19 @@ open class Shell protected constructor (
     override suspend fun detach(executable: ProcessExecutable) {
         executable.init()
         executable.exec()
-        val job = commander.scope.launch { executable.await() }
+        val job = commander.scope.launch { executable.join() }
         detachedJobs.add(executable.process to job)
     }
 
     override suspend fun detach(pipeConfig: PipeConfig) = this.pipeConfig()
         .apply { if (!closed) { toDefaultEndChannel(stdout) } }
         .also {
-//            val job = commander.scope.launch { it.await() }
-            detachedPipelines.add(it) // to job)
+            detachedPipelines.add(it)
         }
 
     override suspend fun joinDetached() {
         detachedJobs.forEach { it.second.join() }
-        detachedPipelines.forEach { it.await() }
+        detachedPipelines.forEach { it.join() }
     }
 
     override suspend fun fg(process: Process) {

@@ -83,7 +83,7 @@ class Pipeline @TestOnly internal constructor (
             }
 
         launch {
-            executable.await()
+            executable.join()
             executable.context.stdout.close()
         }
 
@@ -174,7 +174,7 @@ class Pipeline @TestOnly internal constructor (
      * @see ShellPiping
      * @return this [Pipeline]
      */
-    suspend fun await() = apply {
+    suspend fun join() = apply {
         logger.debug("awaiting pipeline $this")
         processLine.forEach { context.commander.awaitProcess(it) }
         asyncJobs.forEach { it.join() }

@@ -133,7 +133,7 @@ class PipingFromByteReadPacketIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(packet.inputStream())
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

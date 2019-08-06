@@ -138,7 +138,7 @@ class PipingFromFileIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(file.inputStream())
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

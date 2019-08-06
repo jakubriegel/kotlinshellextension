@@ -141,7 +141,7 @@ class PipingFromChannelIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(channel)
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

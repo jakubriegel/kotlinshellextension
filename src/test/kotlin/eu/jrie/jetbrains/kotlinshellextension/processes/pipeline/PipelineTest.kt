@@ -57,7 +57,7 @@ class PipelineTest {
         coVerify (exactly = 1) {
             executableMock.init()
             executableMock.exec()
-            executableMock.await()
+            executableMock.join()
         }
         confirmVerified(executableMock)
 
@@ -117,7 +117,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromStream(stream, contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE).apply { await() }
+            Pipeline.fromStream(stream, contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE).apply { join() }
         }
 
         // then
@@ -155,7 +155,7 @@ class PipelineTest {
         coVerify (exactly = 1) {
             executableMock.init()
             executableMock.exec()
-            executableMock.await()
+            executableMock.join()
         }
         confirmVerified(executableMock)
 
@@ -173,7 +173,7 @@ class PipelineTest {
         // when
         val pipeline = runTest {
             Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
-                .throughLambda(lambda = lambda).apply { await() }
+                .throughLambda(lambda = lambda).apply { join() }
         }
 
         // then
@@ -327,6 +327,6 @@ class PipelineTest {
         every { process } returns processMock
         every { init() } just runs
         coEvery { exec() } just runs
-        coEvery { await() } just runs
+        coEvery { join() } just runs
     }
 }

@@ -139,7 +139,7 @@ class PipingFromStreamIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(stream)
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

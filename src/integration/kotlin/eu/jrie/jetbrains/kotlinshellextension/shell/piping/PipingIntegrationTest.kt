@@ -103,7 +103,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
                 cmd { "echo" withArg content }
             }
 
-            echo pipe stdout await all
+            echo pipe stdout join it
         }
 
         // then
@@ -165,7 +165,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
                 .throughProcess(grep)
                 .throughProcess(systemProcess { cmd = "cat" })
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

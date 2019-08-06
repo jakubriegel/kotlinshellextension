@@ -136,7 +136,7 @@ class PipingFromLambdaIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(lambda)
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

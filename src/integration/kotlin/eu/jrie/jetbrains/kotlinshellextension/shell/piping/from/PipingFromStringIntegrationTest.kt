@@ -132,7 +132,7 @@ class PipingFromStringIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(string.byteInputStream())
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then
