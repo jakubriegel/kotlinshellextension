@@ -1,14 +1,16 @@
+import com.jfrog.bintray.gradle.BintrayExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.3.41"
     maven
-    id("com.github.johnrengelman.shadow") version "5.1.0"
+    `maven-publish`
+    id("com.jfrog.bintray") version "1.8.4"
 }
 
 group = "eu.jrie.jetbrains"
-version = "1.0-SNAPSHOT"
+version = "0.1"
 
 repositories {
     mavenCentral()
@@ -60,10 +62,34 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+val bintrayPublication = "kse"
 
-tasks.shadowJar {
-    archiveName = "kotlin-shell-extension.jar"
-    minimize {
-        exclude(dependency("org.scala-lang:.*:.*"))
+publishing {
+    publications {
+        create<MavenPublication>(bintrayPublication) {
+            from(components["kotlin"])
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
     }
+}
+
+bintray {
+    user = System.getenv("BINTRAY_USER")
+    key = System.getenv("BINTRAY_KEY")
+    setPublications(bintrayPublication)
+    publish = true
+    pkg (delegateClosureOf<BintrayExtension.PackageConfig> {
+        repo = "KotlinShell"
+        name = "kotlin-shellextension"
+        userOrg = "jakubriegel"
+        websiteUrl = ""
+        githubRepo = "jakubriegel/kotlinshellextension"
+        vcsUrl = "https://github.com/jakubriegel/kotlinshellextension.git"
+        description = "Library for performing shell-like programing in Kotlin. Includes process management and piping."
+        setLabels("kotlin", "shell", "pipeline", "process-management")
+        setLicenses("apache2")
+        desc = description
+    })
 }
