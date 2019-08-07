@@ -319,7 +319,7 @@ class ShellProcessTest {
         override val nullin: ProcessReceiveChannel = Channel()
         override val nullout: ProcessSendChannel = Channel()
 
-        override suspend fun detach(executable: ProcessExecutable) = Unit
+        override suspend fun detach(process: ProcessExecutable) = Unit
         override suspend fun joinDetached() = Unit
         override suspend fun fg(process: Process) = Unit
         override suspend fun daemon(executable: ProcessExecutable) = Unit
