@@ -85,7 +85,7 @@ class PipingFromStringIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should start pipeline from string to file`() {
         // given
-        val endFile = file()
+        val endFile = testFile()
 
         // when
         shell {
@@ -100,7 +100,7 @@ class PipingFromStringIntegrationTest : PipingBaseIntegrationTest() {
     fun `should start pipeline from string to file append`() {
         // given
         val fileContent = "def"
-        val file = file(content = fileContent)
+        val file = testFile(content = fileContent)
 
         // when
         shell {

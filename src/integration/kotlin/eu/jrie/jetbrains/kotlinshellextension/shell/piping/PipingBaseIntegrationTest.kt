@@ -1,7 +1,7 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
+import eu.jrie.jetbrains.kotlinshellextension.ProcessBaseIntegrationTest
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
-import eu.jrie.jetbrains.kotlinshellextension.shell.ProcessBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.consumeEach
 import org.jetbrains.annotations.TestOnly

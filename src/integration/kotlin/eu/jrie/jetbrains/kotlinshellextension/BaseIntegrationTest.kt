@@ -46,12 +46,12 @@ abstract class BaseIntegrationTest {
         directory.deleteRecursively()
     }
 
-    fun file(name: String = "testfile", content: String = "") = File("$directoryPath/$name").also {
+    fun testFile(name: String = "testfile", content: String = "") = File("$directoryPath/$name").also {
         it.writeText(content)
         it.createNewFile()
     }
 
-    fun dir(name: String = "testdir") = File("$directoryPath/$name").also {
+    fun testDir(name: String = "testdir") = File("$directoryPath/$name").also {
         it.mkdirs()
     }
 

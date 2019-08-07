@@ -8,28 +8,41 @@ interface ShellUtility : ShellBase {
 
     /**
      * Changes directory to user root
+     *
+     * @return new current [directory]
      */
     fun cd() = cd(env("HOME"))
 
     /**
      * Changes directory to its parent
+     *
+     * @return new current [directory]
      */
     fun cd(up: Up) = cd(directory.parentFile)
 
     /**
      * Changes directory to previous
+     *
+     * @return new current [directory]
      */
     fun cd(pre: Pre) = cd(env("OLDPWD"))
 
     /**
      * Changes directory to given [path]
+     *
+     * @return new current [directory]
      */
-    fun cd(path: String) = cd(File(path))
+    fun cd(path: String): File {
+        val absolutePath = if (path.startsWith('/')) path else "${env("PWD")}/$path"
+        return cd(File(absolutePath))
+    }
 
     /**
      * Changes directory to given [dir]
+     *
+     * @return new current [directory]
      */
-    fun cd(dir: File)
+    fun cd(dir: File): File
 
     /**
      * Adds new shell variable
@@ -95,20 +108,13 @@ interface ShellUtility : ShellBase {
      * Gets file with [name] relative to current [directory].
      * If file don't exist it creates it.
      */
-    fun file(name: String) = getFile(name).apply {
-        if (!exists()) {
-            createNewFile()
-        }
-    }
+    fun file(name: String) = getFile(name).apply { if (!exists()) createNewFile() }
 
     /**
      * Creates new file with given [name] relative to current [directory].
      * If file already existed it overrides it.
      */
-    fun file(name: String, content: String = "") = getFile(name).apply {
-        createNewFile()
-        writeText(content)
-    }
+    fun file(name: String, content: String = "") = file(name).apply { writeText(content) }
 
     /**
      * Creates directory with [name] relative to current [directory]

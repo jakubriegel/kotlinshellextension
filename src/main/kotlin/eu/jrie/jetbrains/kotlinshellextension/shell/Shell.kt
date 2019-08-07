@@ -80,10 +80,11 @@ open class Shell protected constructor (
         export("PWD" to directory.absolutePath)
     }
 
-    override fun cd(dir: File) {
+    override fun cd(dir: File): File {
         export("OLDPWD" to directory.absolutePath)
         directory = assertDir(dir).absoluteFile
         export("PWD" to directory.absolutePath)
+        return directory
     }
 
     override fun variable(variable: Pair<String, String>) {

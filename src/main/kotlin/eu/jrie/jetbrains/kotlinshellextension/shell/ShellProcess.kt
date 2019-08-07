@@ -72,7 +72,12 @@ interface ShellProcess : ShellBase {
     /**
      * Executes system process from from contents of this [File]
      */
-    suspend operator fun File.invoke(mode: ExecutionMode = ExecutionMode.ATTACHED, vararg args: String) = process(*args).invoke(mode)
+    suspend operator fun File.invoke(vararg args: String) = invoke(ExecutionMode.ATTACHED, *args)
+
+    /**
+     * Executes system process from from contents of this [File] in given [mode]
+     */
+    suspend operator fun File.invoke(mode: ExecutionMode, vararg args: String) = process(*args).invoke(mode)
 
     /**
      * Creates executable KotlinScript process

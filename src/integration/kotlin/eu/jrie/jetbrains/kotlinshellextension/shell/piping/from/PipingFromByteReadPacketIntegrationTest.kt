@@ -87,7 +87,7 @@ class PipingFromByteReadPacketIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should start pipeline from packet to file`() {
         // given
-        val file = file()
+        val file = testFile()
 
         // when
         shell {
@@ -102,7 +102,7 @@ class PipingFromByteReadPacketIntegrationTest : PipingBaseIntegrationTest() {
     fun `should start pipeline from packet to file append`() {
         // given
         val fileContent = "def"
-        val file = file(content = fileContent)
+        val file = testFile(content = fileContent)
 
         // when
         shell {

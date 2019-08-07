@@ -203,8 +203,9 @@ class ShellUtilityTest {
 
         internal var cdArg: File? = null
 
-        override fun cd(dir: File) {
+        override fun cd(dir: File): File {
             cdArg = dir
+            return directory
         }
 
         override fun variable(variable: Pair<String, String>) {}

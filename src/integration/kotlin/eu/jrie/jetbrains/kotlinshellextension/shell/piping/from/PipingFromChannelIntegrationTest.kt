@@ -94,7 +94,7 @@ class PipingFromChannelIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should start pipeline from channel to file`() {
         // given
-        val file = file()
+        val file = testFile()
 
         // when
         shell {
@@ -109,7 +109,7 @@ class PipingFromChannelIntegrationTest : PipingBaseIntegrationTest() {
     fun `should start pipeline from channel to file append`() {
         // given
         val fileContent = "def"
-        val file = file(content = fileContent)
+        val file = testFile(content = fileContent)
 
         // when
         shell {

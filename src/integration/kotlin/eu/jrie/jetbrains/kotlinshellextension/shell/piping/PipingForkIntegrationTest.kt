@@ -78,7 +78,7 @@ class PipingForkIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe stdout to null`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         val n = 5
@@ -100,7 +100,7 @@ class PipingForkIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe stderr to null`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         val n = 5
@@ -124,7 +124,7 @@ class PipingForkIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe stdout and stderr to null`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         val n = 5

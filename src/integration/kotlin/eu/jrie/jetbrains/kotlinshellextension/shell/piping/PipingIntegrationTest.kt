@@ -26,7 +26,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe file to "grep "Llorem""`() {
         // given
-        val file = file(content = LOREM_IPSUM)
+        val file = testFile(content = LOREM_IPSUM)
         val pattern = "[Ll]orem"
 
         // when
@@ -45,7 +45,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe "file to grep "Llorem" | wc -m"`() {
         // given
-        val file = file(content = LOREM_IPSUM)
+        val file = testFile(content = LOREM_IPSUM)
         val pattern = "[Ll]orem"
 
         // when
@@ -69,8 +69,8 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe "file to grep "Llorem" | wc --chars to file"`() {
         // given
-        val file = file(content = LOREM_IPSUM)
-        val resultFile = file("result")
+        val file = testFile(content = LOREM_IPSUM)
+        val resultFile = testFile("result")
         val pattern = "[Ll]orem"
 
         // when
@@ -94,7 +94,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe to console`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         // when
@@ -114,7 +114,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe to console by default`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         // when
