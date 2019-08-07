@@ -134,7 +134,7 @@ class Pipeline @TestOnly internal constructor (
      * @return this [Pipeline]
      */
     suspend fun toEndChannel(channel: ProcessSendChannel) = toEndLambda (
-        true,
+        false,
         { channel.send(it) },
         { channel.close() }
     )

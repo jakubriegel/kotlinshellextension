@@ -10,7 +10,6 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveCh
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipeConfig
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.ShellPiping
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -37,6 +36,7 @@ open class Shell protected constructor (
     final override val stdin: ProcessReceiveChannel = nullin
     final override val stdout: ProcessSendChannel
     final override val stderr: ProcessSendChannel
+    private lateinit var stdoutJob: Job
 
     final override var environment: Map<String, String> = environment
         private set
@@ -70,8 +70,11 @@ open class Shell protected constructor (
     }
 
     private fun initOut(): ProcessSendChannel = Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also {
-        commander.scope.launch (Dispatchers.IO) {
-            it.consumeEach { System.out.writePacket(it) }
+        stdoutJob = commander.scope.launch /*(Dispatchers.IO)*/ {
+            it.consumeEach { p ->
+                System.out.writePacket(p)
+                System.out.flush()
+            }
         }
     }
 

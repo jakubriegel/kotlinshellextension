@@ -1,6 +1,9 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.io.PrintStream
@@ -148,6 +151,45 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
 
         // then
         assertEquals(scriptStdOut(n).grep(pattern), readResult())
+    }
+
+    @Test
+    fun `should pipe infinite fibonacci numbers`() {
+        shell {
+            // given
+            val n = 15
+
+            val result: ProcessChannel = Channel(n)
+
+            val buffer: ProcessChannel = Channel<ProcessChannelUnit>(2).apply {
+                send(packet("0"))
+                send(packet("1"))
+            }
+
+            val fibonacci = contextLambda { ctx ->
+                repeat(n) {
+                    val a = ctx.stdin.receive().readText().toLong()
+                    val b = ctx.stdin.receive()
+                        .also { p -> ctx.stdout.send(p.copy()) }
+                        .readText().toLong()
+
+                    packet("${a+b}").let { next ->
+                        ctx.stdout.send(next.copy())
+                        result.send(next)
+                    }
+
+                }
+                result.close()
+            }
+
+            // when
+            detach { buffer pipe fibonacci pipe buffer }
+            pipeline { result pipe stringLambda { "$it, " to "" } pipe storeResult }
+
+            // then
+            val expected = "1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, "
+            assertEquals(expected, readResult())
+        }
     }
 
     @Test
