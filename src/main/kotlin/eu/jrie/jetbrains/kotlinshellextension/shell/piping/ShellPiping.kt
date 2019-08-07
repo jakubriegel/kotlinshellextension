@@ -30,7 +30,7 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
      * Part of piping DSL
      */
     suspend fun pipeline(mode: ExecutionMode = ExecutionMode.ATTACHED, pipeConfig: PipeConfig) = when (mode) {
-        ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) { toDefaultEndChannel(stdout) } } .await()
+        ExecutionMode.ATTACHED -> pipeConfig().apply { if (!closed) { toDefaultEndChannel(stdout) } } .join()
         ExecutionMode.DETACHED -> detach(pipeConfig)
         ExecutionMode.DAEMON -> TODO("implement daemon pipelines")
     }
@@ -45,19 +45,19 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
      * Awaits this [Pipeline]
      * Part of piping DSL
      *
-     * @see Pipeline.await
+     * @see Pipeline.join
      * @return this [Pipeline]
      */
     @Suppress("UNUSED_PARAMETER")
     @ExperimentalCoroutinesApi
-    suspend infix fun Pipeline.await(all: All) = await()
+    suspend infix fun Pipeline.join(it: It) = join()
 
     private suspend fun forkStdErr(process: ProcessExecutable, fork: PipelineFork) {
         forkStdErr(
             process,
             Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also {
                 fork(it)
-                process.afterAwait = { it.close() }
+                process.afterJoin = { it.close() }
             }
         )
     }
@@ -102,15 +102,15 @@ interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
 }
 
 /**
- * Object for [all] alias
+ * Object for [it] alias
  */
-object All
+object It
 /**
- * Alias to be used in piping DSL with [Pipeline.await]
+ * Alias to be used in piping DSL with [Pipeline.join]
  *
  * Ex: `p1 pipe p2 await all`
  *
  * @see ShellPiping
  * @see Pipeline
  */
-typealias all = All
+typealias it = It

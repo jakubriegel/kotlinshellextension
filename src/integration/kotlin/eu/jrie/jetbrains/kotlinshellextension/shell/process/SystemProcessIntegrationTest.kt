@@ -1,7 +1,9 @@
-package eu.jrie.jetbrains.kotlinshellextension.shell
+package eu.jrie.jetbrains.kotlinshellextension.shell.process
 
+import eu.jrie.jetbrains.kotlinshellextension.ProcessBaseIntegrationTest
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessState
+import eu.jrie.jetbrains.kotlinshellextension.shell.ExecutionMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -48,9 +50,9 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
     @Test
     fun `should execute "ls -l"`() {
         // given
-        file("file1")
-        file("file2")
-        dir()
+        testFile("file1")
+        testFile("file2")
+        testDir()
 
         val dirRegex = Regex("drw.+testdir\n")
         val fileRegex = Regex("-rw.+file[0-9]\n")
@@ -219,7 +221,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             val script = systemProcess { cmd = "./${file.name}" }
             detach(script)
             delay(50)
-            script.process.await()
+            script.process.join()
             stateAfterAttach = processes.first().pcb.state
         }
 
@@ -265,7 +267,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
             "./${scriptCode.name}"()
             "./${scriptCode.name}"()
 
-            awaitAll()
+            joinAll()
             states.addAll(processes.map { it.pcb.state })
         }
 
@@ -304,7 +306,7 @@ class SystemProcessIntegrationTest : ProcessBaseIntegrationTest() {
         }
 
         val code = "echo $line"
-        val file = file(content = code)
+        val file = testFile(content = code)
 
         // when
         shell {

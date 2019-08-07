@@ -1,6 +1,9 @@
 package eu.jrie.jetbrains.kotlinshellextension.shell.piping
 
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
+import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.io.PrintStream
@@ -26,7 +29,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe file to "grep "Llorem""`() {
         // given
-        val file = file(content = LOREM_IPSUM)
+        val file = testFile(content = LOREM_IPSUM)
         val pattern = "[Ll]orem"
 
         // when
@@ -45,7 +48,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe "file to grep "Llorem" | wc -m"`() {
         // given
-        val file = file(content = LOREM_IPSUM)
+        val file = testFile(content = LOREM_IPSUM)
         val pattern = "[Ll]orem"
 
         // when
@@ -69,8 +72,8 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe "file to grep "Llorem" | wc --chars to file"`() {
         // given
-        val file = file(content = LOREM_IPSUM)
-        val resultFile = file("result")
+        val file = testFile(content = LOREM_IPSUM)
+        val resultFile = testFile("result")
         val pattern = "[Ll]orem"
 
         // when
@@ -94,7 +97,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe to console`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         // when
@@ -103,7 +106,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
                 cmd { "echo" withArg content }
             }
 
-            echo pipe stdout await all
+            echo pipe stdout join it
         }
 
         // then
@@ -114,7 +117,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should pipe to console by default`() {
         // given
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         // when
@@ -151,6 +154,45 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
     }
 
     @Test
+    fun `should pipe infinite fibonacci numbers`() {
+        shell {
+            // given
+            val n = 15
+
+            val result: ProcessChannel = Channel(n)
+
+            val buffer: ProcessChannel = Channel<ProcessChannelUnit>(2).apply {
+                send(packet("0"))
+                send(packet("1"))
+            }
+
+            val fibonacci = contextLambda { ctx ->
+                repeat(n) {
+                    val a = ctx.stdin.receive().readText().toLong()
+                    val b = ctx.stdin.receive()
+                        .also { p -> ctx.stdout.send(p.copy()) }
+                        .readText().toLong()
+
+                    packet("${a+b}").let { next ->
+                        ctx.stdout.send(next.copy())
+                        result.send(next)
+                    }
+
+                }
+                result.close()
+            }
+
+            // when
+            detach { buffer pipe fibonacci pipe buffer }
+            pipeline { result pipe stringLambda { "$it, " to "" } pipe storeResult }
+
+            // then
+            val expected = "1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, "
+            assertEquals(expected, readResult())
+        }
+    }
+
+    @Test
     fun `should make pipeline with non DSL api`() {
         // when
         shell {
@@ -165,7 +207,7 @@ class PipingIntegrationTest : PipingBaseIntegrationTest() {
                 .throughProcess(grep)
                 .throughProcess(systemProcess { cmd = "cat" })
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

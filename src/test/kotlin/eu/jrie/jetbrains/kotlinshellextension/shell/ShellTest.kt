@@ -26,6 +26,27 @@ class ShellTest {
 
         // then
         assertEquals(dir, shell.directory)
+        assertEquals(dir.absolutePath, shell.env("PWD"))
+    }
+
+    @Test
+    fun `should update OLDPWD after changed directory`() = runTest {
+        // given
+        val dir1 = spyk(File("/some/path")) {
+            every { isDirectory } returns true
+        }
+        val dir2 = spyk(File("/some/other/path")) {
+            every { isDirectory } returns true
+        }
+
+        // when
+        shell.cd(dir1)
+        shell.cd(dir2)
+
+        // then
+        assertEquals(dir2, shell.directory)
+        assertEquals(dir2.absolutePath, shell.env("PWD"))
+        assertEquals(dir1.absolutePath, shell.env("OLDPWD"))
     }
 
     @Test

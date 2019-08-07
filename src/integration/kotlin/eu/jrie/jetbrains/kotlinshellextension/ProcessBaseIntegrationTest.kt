@@ -1,6 +1,5 @@
-package eu.jrie.jetbrains.kotlinshellextension.shell
+package eu.jrie.jetbrains.kotlinshellextension
 
-import eu.jrie.jetbrains.kotlinshellextension.BaseIntegrationTest
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.PipelineContextLambda
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.consumeEach
@@ -34,7 +33,7 @@ abstract class ProcessBaseIntegrationTest : BaseIntegrationTest() {
         "done\n"
 
     fun scriptFile(n: Int): File {
-        val file = file("script", scriptCode(n))
+        val file = testFile("script", scriptCode(n))
 
         shell {
             val chmod = systemProcess {

@@ -92,7 +92,7 @@ class PipingFromStreamIntegrationTest : PipingBaseIntegrationTest() {
     @Test
     fun `should start pipeline from stream to file`() {
         // given
-        val file = file()
+        val file = testFile()
 
         // when
         shell {
@@ -107,7 +107,7 @@ class PipingFromStreamIntegrationTest : PipingBaseIntegrationTest() {
     fun `should start pipeline from stream to file append`() {
         // given
         val fileContent = "def"
-        val file = file(content = fileContent)
+        val file = testFile(content = fileContent)
 
         // when
         shell {
@@ -139,7 +139,7 @@ class PipingFromStreamIntegrationTest : PipingBaseIntegrationTest() {
         shell {
             from(stream)
                 .throughLambda { storeResult(it) }
-                .await()
+                .join()
         }
 
         // then

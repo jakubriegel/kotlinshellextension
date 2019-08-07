@@ -11,7 +11,7 @@ abstract class Executable (
 
     internal abstract suspend fun exec()
 
-    internal open suspend fun await() = Unit
+    internal open suspend fun join() = Unit
 
     suspend operator fun invoke() = invoke(context)
 
@@ -19,7 +19,7 @@ abstract class Executable (
         this.context = context
         init()
         exec()
-        await()
+        join()
     }
 }
 
@@ -29,7 +29,7 @@ class ProcessExecutable (
     private val builder: ProcessBuilder
 ) : Executable(context) {
     lateinit var process: Process
-    internal var afterAwait: () -> Unit = {}
+    internal var afterJoin: () -> Unit = {}
 
     override fun init() = with(context as ProcessExecutionContext) {
         builder
@@ -43,9 +43,9 @@ class ProcessExecutable (
         commander.startProcess(process)
     }
 
-    override suspend fun await() = with(context as ProcessExecutionContext) {
+    override suspend fun join() = with(context as ProcessExecutionContext) {
         commander.awaitProcess(process)
-        afterAwait()
+        afterJoin()
     }
 
 

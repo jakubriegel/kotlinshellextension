@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertIterableEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import java.io.InputStream
 import java.io.OutputStream
 
 @ExperimentalCoroutinesApi
@@ -45,7 +44,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(executableMock, contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(executableMock, contextMock,  CHANNEL_BUFFER_SIZE)
         }
 
         // then
@@ -57,7 +56,7 @@ class PipelineTest {
         coVerify (exactly = 1) {
             executableMock.init()
             executableMock.exec()
-            executableMock.await()
+            executableMock.join()
         }
         confirmVerified(executableMock)
 
@@ -73,7 +72,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromLambda(lambda, contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromLambda(lambda, contextMock,  CHANNEL_BUFFER_SIZE)
         }
 
         // then
@@ -96,39 +95,13 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromChannel(channel, contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromChannel(channel, contextMock,  CHANNEL_BUFFER_SIZE)
         }
 
         // then
         confirmVerified(channel)
         confirmVerified(contextMock)
 
-        assertIterableEquals(emptyList<Process>(), pipeline.processes)
-        assertFalse(pipeline.closed)
-    }
-
-    @Test
-    fun `should create new pipeline from stream`() {
-        // given
-        val data = sequenceOf(1, -1).iterator()
-        val stream = object : InputStream() {
-            override fun read(): Int = data.next()
-        }
-
-        // when
-        val pipeline = runTest {
-            Pipeline.fromStream(stream, contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE).apply { await() }
-        }
-
-        // then
-        verify {
-            contextMock.stdin
-            contextMock.stdout
-            contextMock.stderr
-            contextMock.commander
-        }
-
-        assertFalse(data.hasNext())
         assertIterableEquals(emptyList<Process>(), pipeline.processes)
         assertFalse(pipeline.closed)
     }
@@ -141,7 +114,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
                 .throughProcess(executableMock)
         }
 
@@ -155,7 +128,7 @@ class PipelineTest {
         coVerify (exactly = 1) {
             executableMock.init()
             executableMock.exec()
-            executableMock.await()
+            executableMock.join()
         }
         confirmVerified(executableMock)
 
@@ -172,8 +145,8 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
-                .throughLambda(lambda = lambda).apply { await() }
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
+                .throughLambda(lambda = lambda).apply { join() }
         }
 
         // then
@@ -195,7 +168,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
                 .toEndChannel(channel)
         }
 
@@ -221,7 +194,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
                 .toDefaultEndChannel(channel)
         }
 
@@ -246,7 +219,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
                 .toEndPacket(builder)
         }
 
@@ -269,7 +242,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
                 .toEndStream(stream)
         }
 
@@ -292,7 +265,7 @@ class PipelineTest {
 
         // when
         val pipeline = runTest {
-            Pipeline.fromProcess(processExecutableSpy(), contextMock, RW_PACKET_SIZE, CHANNEL_BUFFER_SIZE)
+            Pipeline.fromProcess(processExecutableSpy(), contextMock,  CHANNEL_BUFFER_SIZE)
                 .toEndStringBuilder(builder)
         }
 
@@ -327,6 +300,6 @@ class PipelineTest {
         every { process } returns processMock
         every { init() } just runs
         coEvery { exec() } just runs
-        coEvery { await() } just runs
+        coEvery { join() } just runs
     }
 }

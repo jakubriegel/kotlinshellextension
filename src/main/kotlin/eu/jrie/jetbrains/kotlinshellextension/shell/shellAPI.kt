@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import java.io.File
 
+typealias BlockingShellScript = Shell.() -> Unit
 typealias ShellScript = suspend Shell.() -> Unit
 
 const val DEFAULT_SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE: Int = 512

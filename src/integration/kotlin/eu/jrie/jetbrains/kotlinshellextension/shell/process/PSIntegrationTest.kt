@@ -1,5 +1,6 @@
-package eu.jrie.jetbrains.kotlinshellextension.shell
+package eu.jrie.jetbrains.kotlinshellextension.shell.process
 
+import eu.jrie.jetbrains.kotlinshellextension.ProcessBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Test
 import java.io.PrintStream
@@ -12,7 +13,7 @@ class PSIntegrationTest : ProcessBaseIntegrationTest() {
         // given
         val n = 10
         val scriptCode = scriptFile(n)
-        val outFile = file("console")
+        val outFile = testFile("console")
         System.setOut(PrintStream(outFile))
 
         val psHeaderRegex = Regex("PID\\s+TIME\\s+CMD\\s*")

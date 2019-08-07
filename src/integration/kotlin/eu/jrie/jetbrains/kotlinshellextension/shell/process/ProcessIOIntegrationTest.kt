@@ -1,5 +1,6 @@
-package eu.jrie.jetbrains.kotlinshellextension.shell
+package eu.jrie.jetbrains.kotlinshellextension.shell.process
 
+import eu.jrie.jetbrains.kotlinshellextension.ProcessBaseIntegrationTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertIterableEquals
@@ -19,7 +20,7 @@ class ProcessIOIntegrationTest : ProcessBaseIntegrationTest() {
 
     @BeforeEach
     fun redirectSystemOut() {
-        outFile = file("console")
+        outFile = testFile("console")
         System.setOut(PrintStream(outFile))
     }
 

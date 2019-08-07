@@ -5,13 +5,11 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.execution.ProcessExecuta
 import eu.jrie.jetbrains.kotlinshellextension.processes.pipeline.Pipeline
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.NullSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.Process
-import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUnit
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.PipeConfig
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.ShellPiping
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -27,10 +25,10 @@ open class Shell protected constructor (
     variables: Map<String, String>,
     directory: File,
     final override val commander: ProcessCommander,
-    override val SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE: Int,
-    override val PIPELINE_RW_PACKET_SIZE: Long,
-    override val PIPELINE_CHANNEL_BUFFER_SIZE: Int
-) : ShellPiping, ShellProcess, ShellManagement {
+    final override val SYSTEM_PROCESS_INPUT_STREAM_BUFFER_SIZE: Int,
+    final override val PIPELINE_RW_PACKET_SIZE: Long,
+    final override val PIPELINE_CHANNEL_BUFFER_SIZE: Int
+) : ShellPiping, ShellProcess, ShellUtility {
 
     final override val nullin: ProcessReceiveChannel = Channel<ProcessChannelUnit>().apply { close() }
     final override val nullout: ProcessSendChannel = NullSendChannel()
@@ -38,15 +36,16 @@ open class Shell protected constructor (
     final override val stdin: ProcessReceiveChannel = nullin
     final override val stdout: ProcessSendChannel
     final override val stderr: ProcessSendChannel
+    private lateinit var stdoutJob: Job
 
-    override var environment: Map<String, String> = environment
-        protected set
+    final override var environment: Map<String, String> = environment
+        private set
 
-    override var variables: Map<String, String> = variables
-        protected set
+    final override var variables: Map<String, String> = variables
+        private set
 
-    override var directory: File = directory
-        protected set
+    final override var directory: File = directory
+        private set
 
     override val detached: List<Process>
         get() = detachedJobs.map { it.first }
@@ -59,23 +58,36 @@ open class Shell protected constructor (
     private val daemonsExecs = mutableListOf<ProcessExecutable>()
 
     override val pipelines: List<Pipeline>
-        get() = detachedPipelines.toList() // map { it.first }
+        get() = detachedPipelines.toList()
 
-    private val detachedPipelines = mutableListOf<Pipeline>()//Pair<Pipeline, Job>>()
+    private val detachedPipelines = mutableListOf<Pipeline>()
 
     init {
-        val systemOutChannel: ProcessChannel = Channel(PIPELINE_CHANNEL_BUFFER_SIZE)
-        commander.scope.launch (Dispatchers.IO) {
-            systemOutChannel.consumeEach {
-                System.out.writePacket(it)
-            }
-        }
-        stdout = systemOutChannel
-        stderr = systemOutChannel
+        stdout = initOut()
+        stderr = stdout
+
+        initEnv()
     }
 
-    override fun cd(dir: File) {
-        directory = assertDir(dir).canonicalFile
+    private fun initOut(): ProcessSendChannel = Channel<ProcessChannelUnit>(PIPELINE_CHANNEL_BUFFER_SIZE).also {
+        stdoutJob = commander.scope.launch /*(Dispatchers.IO)*/ {
+            it.consumeEach { p ->
+                System.out.writePacket(p)
+                System.out.flush()
+            }
+        }
+    }
+
+    private fun initEnv() {
+        environment =  systemEnv + environment
+        export("PWD" to directory.absolutePath)
+    }
+
+    override fun cd(dir: File): File {
+        export("OLDPWD" to directory.absolutePath)
+        directory = assertDir(dir).absoluteFile
+        export("PWD" to directory.absolutePath)
+        return directory
     }
 
     override fun variable(variable: Pair<String, String>) {
@@ -95,23 +107,22 @@ open class Shell protected constructor (
         .apply { remove(key) }
         .toMap()
 
-    override suspend fun detach(executable: ProcessExecutable) {
-        executable.init()
-        executable.exec()
-        val job = commander.scope.launch { executable.await() }
-        detachedJobs.add(executable.process to job)
+    override suspend fun detach(process: ProcessExecutable) {
+        process.init()
+        process.exec()
+        val job = commander.scope.launch { process.join() }
+        detachedJobs.add(process.process to job)
     }
 
     override suspend fun detach(pipeConfig: PipeConfig) = this.pipeConfig()
         .apply { if (!closed) { toDefaultEndChannel(stdout) } }
         .also {
-//            val job = commander.scope.launch { it.await() }
-            detachedPipelines.add(it) // to job)
+            detachedPipelines.add(it)
         }
 
     override suspend fun joinDetached() {
         detachedJobs.forEach { it.second.join() }
-        detachedPipelines.forEach { it.await() }
+        detachedPipelines.forEach { it.join() }
     }
 
     override suspend fun fg(process: Process) {
@@ -165,7 +176,7 @@ open class Shell protected constructor (
             Shell(
                 env ?: emptyMap(),
                 emptyMap(),
-                assertDir(dir?.canonicalFile ?: currentDir()),
+                assertDir(dir?.absoluteFile ?: currentDir()),
                 commander,
                 systemProcessInputStreamBufferSize,
                 pipelineRwPacketSize,

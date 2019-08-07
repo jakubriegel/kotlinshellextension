@@ -88,6 +88,42 @@ class ShellProcessTest {
     }
 
     @Test
+    fun `should construct system process executable from file`() {
+        // given
+        mockkConstructor(SystemProcessConfiguration::class)
+        every { anyConstructed<SystemProcessConfiguration>().builder() } returns mockk()
+        val file = File("some/file")
+
+        // when
+        with(shell) { file.process() }
+
+        // then
+        verify {
+            anyConstructed<SystemProcessConfiguration>().env(any())
+            anyConstructed<SystemProcessConfiguration>().dir(any())
+            anyConstructed<SystemProcessConfiguration>().builder()
+        }
+    }
+
+    @Test
+    fun `should create system process executable from file with args`() {
+        // given
+        mockkConstructor(SystemProcessConfiguration::class)
+        every { anyConstructed<SystemProcessConfiguration>().builder() } returns mockk()
+        val file = File("some/file")
+
+        // when
+        with(shell) { file.process("arg1", "arg2") }
+
+        // then
+        verify {
+            anyConstructed<SystemProcessConfiguration>().env(any())
+            anyConstructed<SystemProcessConfiguration>().dir(any())
+            anyConstructed<SystemProcessConfiguration>().builder()
+        }
+    }
+
+    @Test
     fun `should invoke system process executable from command`() = runBlocking {
         // given
         mockkConstructor(SystemProcessConfiguration::class)
@@ -98,6 +134,52 @@ class ShellProcessTest {
 
         // when
         with(shell) { "cmd"() }
+
+        // then
+        verify {
+            anyConstructed<SystemProcessConfiguration>().env(any())
+            anyConstructed<SystemProcessConfiguration>().dir(any())
+            anyConstructed<SystemProcessConfiguration>().builder()
+        }
+        coVerify { anyConstructed<ProcessExecutable>().invoke(any()) }
+    }
+
+    @Test
+    fun `should invoke system process executable from file`() = runBlocking {
+        // given
+        mockkConstructor(SystemProcessConfiguration::class)
+        every { anyConstructed<SystemProcessConfiguration>().builder() } returns mockk()
+
+        mockkConstructor(ProcessExecutable::class)
+        coEvery { anyConstructed<ProcessExecutable>().invoke(any()) } just runs
+
+        val file = File("some/file")
+
+        // when
+        with(shell) { file() }
+
+        // then
+        verify {
+            anyConstructed<SystemProcessConfiguration>().env(any())
+            anyConstructed<SystemProcessConfiguration>().dir(any())
+            anyConstructed<SystemProcessConfiguration>().builder()
+        }
+        coVerify { anyConstructed<ProcessExecutable>().invoke(any()) }
+    }
+
+    @Test
+    fun `should invoke system process executable from file with args`() = runBlocking {
+        // given
+        mockkConstructor(SystemProcessConfiguration::class)
+        every { anyConstructed<SystemProcessConfiguration>().builder() } returns mockk()
+
+        mockkConstructor(ProcessExecutable::class)
+        coEvery { anyConstructed<ProcessExecutable>().invoke(any()) } just runs
+
+        val file = File("some/file")
+
+        // when
+        with(shell) { file("arg1", "arg2") }
 
         // then
         verify {
@@ -159,7 +241,7 @@ class ShellProcessTest {
     @Test
     fun `should await process`() = runBlocking {
         // when
-        with(shell) { runningProcessMock.await() }
+        with(shell) { runningProcessMock.join() }
 
         // then
         coVerify { commanderMock.awaitProcess(runningProcessMock) }
@@ -168,7 +250,7 @@ class ShellProcessTest {
     @Test
     fun `should await all processes`() = runBlocking {
         // when
-        with(shell) { awaitAll() }
+        with(shell) { joinAll() }
 
         // then
         coVerify { commanderMock.awaitAll() }
@@ -237,7 +319,7 @@ class ShellProcessTest {
         override val nullin: ProcessReceiveChannel = Channel()
         override val nullout: ProcessSendChannel = Channel()
 
-        override suspend fun detach(executable: ProcessExecutable) = Unit
+        override suspend fun detach(process: ProcessExecutable) = Unit
         override suspend fun joinDetached() = Unit
         override suspend fun fg(process: Process) = Unit
         override suspend fun daemon(executable: ProcessExecutable) = Unit
