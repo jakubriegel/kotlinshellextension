@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.3.41"
+    kotlin("jvm") version "1.3.50-eap-54"
     maven
     `maven-publish`
     id("com.jfrog.bintray") version "1.8.4"
@@ -14,6 +14,7 @@ version = "0.1"
 
 repositories {
     mavenCentral()
+    maven("https://dl.bintray.com/kotlin/kotlin-eap")
 }
 
 dependencies {
