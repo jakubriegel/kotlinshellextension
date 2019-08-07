@@ -107,11 +107,11 @@ open class Shell protected constructor (
         .apply { remove(key) }
         .toMap()
 
-    override suspend fun detach(executable: ProcessExecutable) {
-        executable.init()
-        executable.exec()
-        val job = commander.scope.launch { executable.join() }
-        detachedJobs.add(executable.process to job)
+    override suspend fun detach(process: ProcessExecutable) {
+        process.init()
+        process.exec()
+        val job = commander.scope.launch { process.join() }
+        detachedJobs.add(process.process to job)
     }
 
     override suspend fun detach(pipeConfig: PipeConfig) = this.pipeConfig()

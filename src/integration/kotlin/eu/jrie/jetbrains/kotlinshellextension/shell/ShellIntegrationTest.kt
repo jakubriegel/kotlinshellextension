@@ -39,7 +39,7 @@ class ShellIntegrationTest : ProcessBaseIntegrationTest() {
             val file = file("newFile")
 
             // then
-            assertEquals("$directoryPath/newDir/newFile", file.canonicalPath)
+            assertEquals("$testDirectoryPath/newDir/newFile", file.canonicalPath)
         }
     }
 

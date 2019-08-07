@@ -29,8 +29,8 @@ abstract class BaseIntegrationTest {
     protected val environment = mapOf(env1, env2, env3)
 
 
-    protected val directoryPath = "$testDirPath/${this::class.simpleName}Dir"
-    protected val directory = File(directoryPath)
+    protected val testDirectoryPath = "$testDirPath/${this::class.simpleName}Dir"
+    protected val testDirectory = File(testDirectoryPath)
 
     private lateinit var commander: ProcessCommander
     protected lateinit var scope: CoroutineScope
@@ -38,27 +38,27 @@ abstract class BaseIntegrationTest {
 
     @BeforeEach
     fun init() {
-        directory.mkdirs()
+        testDirectory.mkdirs()
     }
 
     @AfterEach
     fun cleanup() {
-        directory.deleteRecursively()
+        testDirectory.deleteRecursively()
     }
 
-    fun testFile(name: String = "testfile", content: String = "") = File("$directoryPath/$name").also {
+    fun testFile(name: String = "testfile", content: String = "") = File("$testDirectoryPath/$name").also {
         it.writeText(content)
         it.createNewFile()
     }
 
-    fun testDir(name: String = "testdir") = File("$directoryPath/$name").also {
+    fun testDir(name: String = "testdir") = File("$testDirectoryPath/$name").also {
         it.mkdirs()
     }
 
     @TestOnly
     protected fun shell(
         env: Map<String, String>? = null,
-        dir: File? = directory,
+        dir: File? = testDirectory,
         script: ShellScript
     ) = runBlocking {
         eu.jrie.jetbrains.kotlinshellextension.shell.shell(env, dir, this) { script() }

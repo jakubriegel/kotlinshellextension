@@ -57,6 +57,11 @@ interface ShellProcess : ShellBase {
     }
 
     /**
+     * Creates executable system process from [cmd] command line
+     */
+    fun systemProcess(cmd: String) = cmd.process()
+
+    /**
      * Executes system process from this command line
      */
     suspend operator fun String.invoke(mode: ExecutionMode = ExecutionMode.ATTACHED) = process().invoke(mode)
@@ -104,9 +109,9 @@ interface ShellProcess : ShellBase {
         return builder()
     }
 
-    suspend fun detach(executable: ProcessExecutable)
+    suspend fun detach(process: ProcessExecutable)
 
-    suspend fun detach(vararg executable: ProcessExecutable) = executable.forEach { detach(it) }
+    suspend fun detach(vararg process: ProcessExecutable) = process.forEach { detach(it) }
 
     suspend fun joinDetached()
 
@@ -126,6 +131,8 @@ interface ShellProcess : ShellBase {
     suspend fun daemon(vararg executable: ProcessExecutable) = executable.forEach { daemon(it) }
 
     suspend fun Process.join() = commander.awaitProcess(this)
+
+    suspend fun join(vararg process: Process) = process.forEach { it.join() }
 
     suspend fun joinAll() = commander.awaitAll()
 
