@@ -7,13 +7,15 @@ plugins {
     maven
     `maven-publish`
     id("com.jfrog.bintray") version "1.8.4"
+    id("org.jetbrains.dokka") version "0.9.17"
 }
 
 group = "eu.jrie.jetbrains"
-version = "0.1"
+version = "0.2.2"
 
 repositories {
     mavenCentral()
+    jcenter()
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
 }
 
@@ -45,22 +47,50 @@ sourceSets {
     }
 }
 
-task<Test>("integration") {
+val integration by tasks.creating(Test::class) {
     description = "Runs the integration tests"
-    group = "verification"
+    group = JavaBasePlugin.VERIFICATION_GROUP
     testClassesDirs = sourceSets["integration"].output.classesDirs
     classpath = sourceSets["integration"].runtimeClasspath
-    mustRunAfter(tasks["test"])
+    mustRunAfter(tasks.test)
     useJUnitPlatform()
 }
 
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+val dokkaJar by tasks.creating(Jar::class) {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    classifier = "javadoc"
+    description = "Assembles Kotlin docs with Dokka"
+    from(tasks.dokka)
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
+val sourcesJar by tasks.creating(Jar::class) {
+    dependsOn(JavaPlugin.CLASSES_TASK_NAME)
+    classifier = "sources"
+    from(sourceSets["main"].allSource)
+}
+
+tasks {
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
+    }
+
+    withType<Test> {
+        useJUnitPlatform()
+    }
+
+    check { dependsOn(integration) }
+
+    dokka {
+        outputFormat = "html"
+        outputDirectory = "$buildDir/javadoc"
+        noStdlibLink = true
+    }
+}
+
+artifacts {
+    archives(sourcesJar)
+    archives(dokkaJar)
+    archives(tasks.jar)
 }
 
 val bintrayPublication = "kse"
@@ -72,6 +102,8 @@ publishing {
             groupId = project.group.toString()
             artifactId = project.name
             version = project.version.toString()
+
+            setArtifacts(listOf(sourcesJar, dokkaJar, tasks.jar.get()))
         }
     }
 }

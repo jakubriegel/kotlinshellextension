@@ -52,7 +52,7 @@ fun script(scope: CoroutineScope, script: ScriptingShell.() -> Unit) {
  * @see Shell
  */
 @ExperimentalCoroutinesApi
-class ScriptingShell internal constructor (
+open class ScriptingShell internal constructor (
     private val scope: CoroutineScope,
     private val shell: Shell
 ) {
