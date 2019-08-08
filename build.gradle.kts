@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "eu.jrie.jetbrains"
-version = "0.2.2"
+version = "0.2"
 
 repositories {
     mavenCentral()
