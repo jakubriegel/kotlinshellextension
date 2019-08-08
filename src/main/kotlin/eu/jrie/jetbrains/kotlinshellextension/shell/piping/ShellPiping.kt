@@ -10,6 +10,7 @@ import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessChannelUn
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessReceiveChannel
 import eu.jrie.jetbrains.kotlinshellextension.processes.process.ProcessSendChannel
 import eu.jrie.jetbrains.kotlinshellextension.shell.ExecutionMode
+import eu.jrie.jetbrains.kotlinshellextension.shell.ShellUtility
 import eu.jrie.jetbrains.kotlinshellextension.shell.piping.from.ShellPipingFrom
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -18,7 +19,7 @@ typealias PipeConfig =  suspend ShellPiping.() -> Pipeline
 typealias PipelineFork = suspend (ProcessReceiveChannel) -> Unit
 
 @ExperimentalCoroutinesApi
-interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo {
+interface ShellPiping : ShellPipingFrom, ShellPipingThrough, ShellPipingTo, ShellUtility {
 
     /**
      * List of all pipelines in this shell

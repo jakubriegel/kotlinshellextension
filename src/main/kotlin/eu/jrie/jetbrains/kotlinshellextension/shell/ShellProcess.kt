@@ -75,6 +75,11 @@ interface ShellProcess : ShellBase {
     }
 
     /**
+     * Creates executable system process from [file] contents
+     */
+    fun systemProcess(file: File, vararg arg: String) = file.process(*arg)
+
+    /**
      * Executes system process from from contents of this [File]
      */
     suspend operator fun File.invoke(vararg args: String) = invoke(ExecutionMode.ATTACHED, *args)

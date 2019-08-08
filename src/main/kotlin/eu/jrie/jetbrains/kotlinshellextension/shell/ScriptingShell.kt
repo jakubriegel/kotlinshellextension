@@ -82,6 +82,11 @@ open class ScriptingShell internal constructor (
     fun String.process() = blocking { shell.systemProcess(this) }
 
     /**
+     * @see Shell.process
+     */
+    fun File.process(vararg arg: String) = blocking { shell.systemProcess(this, *arg) }
+
+    /**
      * @see Executable.invoke
      */
     fun Executable.run() = blocking { invoke() }
