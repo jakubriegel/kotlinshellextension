@@ -1,5 +1,5 @@
 # Kotlin Shell Extension
-[ ![Download](https://api.bintray.com/packages/jakubriegel/KotlinShell/kotlin-shellextension/images/download.svg?version=0.1) ](https://bintray.com/jakubriegel/KotlinShell/kotlin-shellextension/0.1/link)
+[ ![Download](https://api.bintray.com/packages/jakubriegel/KotlinShell/kotlin-shellextension/images/download.svg?version=0.2) ](https://bintray.com/jakubriegel/KotlinShell/kotlin-shellextension/0.2/link)
 
 ## get it
 ```kotlin
